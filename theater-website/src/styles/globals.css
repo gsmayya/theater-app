@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Ensure column stacking for main layout */
+.flex {
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-1 {
+  flex: 1 1 0%;
+}
+
+/* Utility classes for spacing and background */
+.p-4 { padding: 1rem; }
+.mb-4 { margin-bottom: 1rem; }
+.bg-gray-50 { background-color: #f9fafb; }
+.bg-white { background-color: #fff; }
+.rounded { border-radius: 0.5rem; }
+.shadow { box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+/* Typography */
+.text-2xl { font-size: 1.5rem; font-weight: bold; }
+.text-center { text-align: center; }

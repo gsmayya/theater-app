@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  website:
+    build: ./theater-website
+    container_name: theater-website
+    ports:
+      - "3000:3000"
+    depends_on:
+      - theater-backend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://theater-website-backend:8080  
+    networks:
+      - app-network
+
+  theater-backend:
+    build: ./theater
+    container_name: theater-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=mysql
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - DB_NAME=mydb
+      - REDIS_HOST=redis
+    depends_on:
+      redis:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  redis:
+    image: redis:alpine
+    container_name: redis-theater-cache
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    volumes:
+      - /Users/gsmayya/Code/theater-tickets/redis/data
+    networks:
+      - app-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-db-theater
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: mydb
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    volumes:
+      - /Users/gsmayya/Code/theater-tickets/mysql-data/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - app-network
+
+
+networks:
+  app-network:
+
+
