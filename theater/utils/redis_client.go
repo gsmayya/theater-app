@@ -12,6 +12,29 @@ import (
 type RedisAccess struct {
 	client  *redis.Client
 	context *context.Context
+	url     string
+}
+
+func TestRedis() {
+	testRedisAccess := GetStoreAccess()
+	err := AddToCache("testKey", "testValue", testRedisAccess)
+	if err != nil {
+		log.Println("Error adding to cache:", err)
+	} else {
+		log.Println("Successfully added to cache, Redis is working")
+	}
+}
+
+func NewClient(url string) *RedisAccess {
+	log.Println("Connecting to Redis at ", url)
+	client := redis.NewClient(&redis.Options{
+		Addr:     url,
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+	addInstrumentation(client)
+	ctx := context.Background()
+	return &RedisAccess{client: client, context: &ctx, url: url}
 }
 
 var StoreAccess *RedisAccess
@@ -19,17 +42,10 @@ var once sync.Once
 
 func GetStoreAccess() *RedisAccess {
 	once.Do(func() {
-		StoreAccess = func() *RedisAccess {
-			client := redis.NewClient(&redis.Options{
-				Addr:     "localhost:6379",
-				Password: "", // no password set
-				DB:       0,  // use default DB
-			})
-			addInstrumentation(client)
-			ctx := context.Background()
-			return &RedisAccess{client: client, context: &ctx}
-		}()
+		redisURL := GetEnvOrDefault("REDIS_URL", "localhost:6379")
+		StoreAccess = NewClient(redisURL)
 	})
+	log.Println("Getting Redis on ", StoreAccess.url)
 	return StoreAccess
 }
 

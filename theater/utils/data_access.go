@@ -2,7 +2,16 @@ package utils
 
 import (
 	"log"
+	"os"
 )
+
+func GetEnvOrDefault(key, defaultValue string) string {
+	val, exists := os.LookupEnv(key)
+	if !exists || val == "" { // Check if not exists OR if exists but is empty
+		return defaultValue
+	}
+	return val
+}
 
 /*
 This will eventually will access the database and fetch new details, for now, it is dummy

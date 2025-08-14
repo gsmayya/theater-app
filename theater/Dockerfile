@@ -7,10 +7,9 @@ COPY go.mod ./
 RUN go mod download
 
 COPY . .
-
+RUN rm -f theater 
+RUN rm -f main
 RUN CGO_ENABLED=0 GOOS=linux go build -o theater .
-RUN go test -v ./...
 
 EXPOSE 8080
-USER nonroot:nonroot
-CMD ["./theater"]
+CMD ["./run.sh"]

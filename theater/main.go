@@ -6,9 +6,12 @@ import (
 	"net/http"
 
 	"github.com/gsmayya/theater/handlers"
+	"github.com/gsmayya/theater/utils"
 )
 
 func main() {
+
+	utils.TestRedis()
 	fmt.Println("Starting Ticket Backend Service...")
 	http.HandleFunc("/", handlers.DefaultHandler)
 	http.HandleFunc("/status", handlers.DefaultHandler)
