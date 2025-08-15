@@ -27,8 +27,8 @@ func ShowListHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(show)
 }
 
-func addToShows(w http.ResponseWriter, r *http.Request) (string, error) {
-	show_info := show.NewShowFromPost(r)
+func addToShowsPut(w http.ResponseWriter, r *http.Request) (string, error) {
+	show_info := show.NewShowFromPut(r)
 	uuid := show_info.Show_Id.String()
 	// Call the function to add the show
 	err := show.PutShow(show_info)
@@ -56,14 +56,16 @@ func getShowDetails(w http.ResponseWriter, r *http.Request) (string, error) {
 }
 
 func ShowHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		uuid, err := addToShows(w, r)
+
+	if r.Method == http.MethodPut {
+		uuid, err := addToShowsPut(w, r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("uuid", uuid)
 	}
+
 	if r.Method == http.MethodGet {
 		uuid, err := getShowDetails(w, r)
 		if err != nil {

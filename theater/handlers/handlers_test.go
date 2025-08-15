@@ -31,7 +31,7 @@ func TestShowListHandler(t *testing.T) {
 	}
 }
 
-func TestShowHandlerPost(t *testing.T) {
+func TestShowHandlerPut(t *testing.T) {
 	uuid := insertValue(t)
 	log.Println("Value obtained is ", uuid)
 }
@@ -61,8 +61,9 @@ func TestShowHandlerGet(t *testing.T) {
 
 func insertValue(t *testing.T) string {
 	resp := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/show", nil)
-	addFormData(req, "Test Show", "Test Show Details", 100, 50, "Test Location")
+	req := httptest.NewRequest(http.MethodPut, "/show", nil)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	addQueryData(req, "Test Show", "Test Show Details", 100, 50, "Test Location")
 
 	ShowHandler(resp, req)
 
@@ -73,11 +74,12 @@ func insertValue(t *testing.T) string {
 	return uuid
 }
 
-func addFormData(req *http.Request, name, details string, price, totalTickets int32, location string) {
-	req.PostForm = make(map[string][]string)
-	req.PostForm["name"] = []string{name}
-	req.PostForm["details"] = []string{details}
-	req.PostForm["price"] = []string{fmt.Sprintf("%d", price)}
-	req.PostForm["total_tickets"] = []string{fmt.Sprintf("%d", totalTickets)}
-	req.PostForm["location"] = []string{location}
+func addQueryData(req *http.Request, name, details string, price, totalTickets int32, location string) {
+	query := req.URL.Query()
+	query.Add("name", name)
+	query.Add("details", details)
+	query.Add("price", fmt.Sprintf("%d", price))
+	query.Add("total_tickets", fmt.Sprintf("%d", totalTickets))
+	query.Add("location", location)
+	req.URL.RawQuery = query.Encode()
 }

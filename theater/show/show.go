@@ -3,10 +3,11 @@ package show
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/google/uuid"
-	"github.com/gsmayya/theater/utils"
 )
 
 type Show struct {
@@ -31,12 +32,24 @@ func NewShow(name string, details string, price int32, total_tickets int32, loca
 	}
 }
 
-func NewShowFromPost(r *http.Request) *Show {
-	name := r.PostForm.Get("name")
-	details := r.PostForm.Get("details")
-	price := utils.GetInt32(r.PostForm.Get("price"))
-	totalTickets := utils.GetInt32(r.PostForm.Get("total_tickets"))
-	location := r.PostForm.Get("location")
+func NewShowFromPut(r *http.Request) *Show {
+
+	name := r.URL.Query().Get("name")
+	details := r.URL.Query().Get("details")
+	price_str := r.URL.Query().Get("price")
+	price_tmp, err_price := strconv.ParseInt(price_str, 10, 32)
+
+	if err_price != nil {
+		log.Fatal("Error converting string, got ", price_str)
+	}
+	price := int32(price_tmp)
+	totalTickets_str := r.URL.Query().Get("total_tickets")
+	totalTickets_tmp, err_tickets := strconv.ParseInt(totalTickets_str, 10, 32)
+	if err_tickets != nil {
+		log.Fatal("Error converting string, got ", totalTickets_str)
+	}
+	totalTickets := int32(totalTickets_tmp)
+	location := r.URL.Query().Get("location")
 
 	return &Show{
 		Show_Id:        uuid.New(),
