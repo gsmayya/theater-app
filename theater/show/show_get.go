@@ -7,10 +7,21 @@ import (
 /*
 This will eventually will access the database and fetch new details, for now, it is dummy
 */
-func GetShows() (map[string]string, error) {
-	// mock -- Need to get from redis
-	show := NewShow("show1", "Movie 1", 100, 50, "Location 1")
-	return ShowToMap(show), nil
+func GetShows() (map[string]*Show, error) {
+	redis := utils.GetStoreAccess()
+	allData, err := utils.GetAll(redis)
+	if err != nil {
+		return nil, err
+	}
+	shows := make(map[string]*Show)
+	for key, value := range allData {
+		show, err := JSONToShow(value)
+		if err != nil {
+			return nil, err
+		}
+		shows[key] = show
+	}
+	return shows, nil
 }
 
 func GetShow(uuid string) (*Show, error) {

@@ -15,16 +15,6 @@ type RedisAccess struct {
 	url     string
 }
 
-func TestRedis() {
-	testRedisAccess := GetStoreAccess()
-	err := AddToCache("testKey", "testValue", testRedisAccess)
-	if err != nil {
-		log.Println("Error adding to cache:", err)
-	} else {
-		log.Println("Successfully added to cache, Redis is working")
-	}
-}
-
 func NewClient(url string) *RedisAccess {
 	log.Println("Connecting to Redis at ", url)
 	client := redis.NewClient(&redis.Options{
@@ -117,6 +107,28 @@ func HashGetAll(key string, redisAccess *RedisAccess) (map[string]string, error)
 	}
 	log.Println("Hash retrieved from Redis:", key, "=", res)
 	return res, nil
+}
+
+func GetAll(redisAccess *RedisAccess) (map[string]string, error) {
+	keys, err := redisAccess.client.Keys(*redisAccess.context, "*").Result()
+	if err != nil {
+		log.Println("Error getting keys from Redis:", err)
+		return nil, err
+	}
+
+	allData := make(map[string]string)
+	for _, key := range keys {
+		log.Println("Getting value for key", key)
+		value, err := redisAccess.client.Get(*redisAccess.context, key).Result()
+		if err != nil {
+			log.Println("Error getting value for key", key, "from Redis:", err)
+			continue
+		}
+
+		allData[key] = value
+	}
+	log.Println("All data retrieved from Redis")
+	return allData, nil
 }
 
 func addInstrumentation(client *redis.Client) {

@@ -27,6 +27,10 @@ func TestGetFromCache(t *testing.T) {
 	if value != "bar" {
 		t.Errorf("Expected value 'bar', got %s", value)
 	}
+	err = ClearCache(redisAccess)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
 }
 
 func TestDeleteFromCache(t *testing.T) {
@@ -77,6 +81,10 @@ func TestHashSet(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
+	err = ClearCache(redisAccess)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
 }
 
 func TestHashGet(t *testing.T) {
@@ -107,6 +115,10 @@ func TestHashGet(t *testing.T) {
 	if res2 != "4972" {
 		t.Errorf("Expected value '4972', got %s", res2)
 	}
+	err = ClearCache(redisAccess)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
 }
 
 func TestHashGetAll(t *testing.T) {
@@ -132,5 +144,9 @@ func TestHashGetAll(t *testing.T) {
 	tmp := fmt.Sprintf("%v", res1)
 	if tmp != "map[brand:Ergonom model:Deimos price:4972 type:Enduro bikes]" {
 		t.Errorf("Expected value 'map[brand:Ergonom model:Deimos price:4972 type:Enduro bikes]', got %s", tmp)
+	}
+	err = ClearCache(redisAccess)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
 	}
 }
