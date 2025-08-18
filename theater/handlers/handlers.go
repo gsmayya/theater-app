@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gsmayya/theater/show"
+	"github.com/gsmayya/theater/shows"
 )
 
 // for any new just returns ok with a message.
@@ -18,7 +18,7 @@ func DefaultHandler(w http.ResponseWriter, r *http.Request) {
 
 func ShowListHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	show, err := show.GetShows()
+	show, err := shows.GetShows()
 	if err != nil {
 		http.Error(w, "Failed to get shows", http.StatusInternalServerError)
 		return
@@ -28,10 +28,11 @@ func ShowListHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func addToShowsPut(w http.ResponseWriter, r *http.Request) (string, error) {
-	show_info := show.NewShowFromPut(r)
+	var show_obj *shows.ShowData
+	show_info := show_obj.NewShowFromPut(r)
 	uuid := show_info.Show_Id.String()
 	// Call the function to add the show
-	err := show.PutShow(show_info)
+	err := shows.PutShow(show_info)
 	if err != nil {
 		http.Error(w, "Failed to add show", http.StatusInternalServerError)
 		return "", err
@@ -45,7 +46,7 @@ func getShowDetails(w http.ResponseWriter, r *http.Request) (string, error) {
 		http.Error(w, "Show ID is required", http.StatusBadRequest)
 		return show_id, fmt.Errorf("show_id is required")
 	}
-	show, err := show.GetShow(show_id)
+	show, err := shows.GetShow(show_id)
 	if err != nil {
 		http.Error(w, "Failed to get shows", http.StatusInternalServerError)
 		return show_id, err
