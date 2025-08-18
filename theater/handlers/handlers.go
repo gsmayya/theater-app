@@ -28,8 +28,8 @@ func ShowListHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func addToShowsPut(w http.ResponseWriter, r *http.Request) (string, error) {
-	var show_obj *shows.ShowData
-	show_info := show_obj.NewShowFromPut(r)
+	show_info := &shows.ShowData{}
+	show_info.NewShowFromPut(r)
 	uuid := show_info.Show_Id.String()
 	// Call the function to add the show
 	err := shows.PutShow(show_info)

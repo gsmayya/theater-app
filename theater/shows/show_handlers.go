@@ -17,7 +17,7 @@ func GetShows() (map[string]*ShowData, error) {
 	}
 	shows := make(map[string]*ShowData)
 	for key, value := range allData {
-		var show_info *ShowData
+		show_info := &ShowData{}
 		if _, err := show_info.JSONToShow(value); err != nil {
 			return nil, err
 		}
@@ -43,7 +43,7 @@ func GetShow(uuid string) (*ShowData, error) {
 
 func PutShowDetails(name string, details string, price int32, totalTickets int32, location string) error {
 	// This function will eventually update the show details in the database
-	var show_info *ShowData
+	show_info := &ShowData{}
 	show_info.NewShow(name, details, price, totalTickets, location)
 	log.Println(show_info)
 	return add(show_info)
