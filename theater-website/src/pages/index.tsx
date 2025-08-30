@@ -3,10 +3,12 @@ import { useRouter } from 'next/router';
 import Layout from '../components/Layout';
 import ShowCard from '../components/ShowCard';
 import Calendar from '../components/Calendar';
+import SearchBar from '../components/SearchBar';
 import { Show, CalendarEvent } from '../types/show';
 
 const HomePage = () => {
   const [shows, setShows] = useState<Show[]>([]);
+  const [searchResults, setSearchResults] = useState<Show[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -110,11 +112,16 @@ const HomePage = () => {
           <div className="xl:col-span-3">
             {/* Shows Section */}
             <div className="mb-8">
-              <h2 className="text-3xl font-bold text-theater-dark mb-6">
-                Current Shows
-              </h2>
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+                <h2 className="text-3xl font-bold text-theater-dark">
+                  Current Shows
+                </h2>
+                <div className="lg:w-1/2">
+                  <SearchBar onSearch={setSearchResults} />
+                </div>
+              </div>
               
-              {shows.length === 0 ? (
+              {((searchResults && searchResults.length === 0) || (!searchResults && shows.length === 0)) ? (
                 <div className="text-center py-12">
                   <div className="text-6xl mb-4">🎭</div>
                   <h3 className="text-xl font-semibold text-gray-600 mb-2">
@@ -126,7 +133,7 @@ const HomePage = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {shows.map(show => (
+                  {(searchResults ?? shows).map(show => (
                     <ShowCard
                       key={show.id}
                       show={show}

@@ -52,14 +52,24 @@ const Navigation = () => {
               </Link>
               <Link
                 href="/my-bookings"
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  isActive('/my-bookings') 
-                    ? 'bg-theater-primary text-white' 
-                    : 'text-gray-300 hover:bg-theater-primary/20 hover:text-white'
-                }`}
-              >
-                My Bookings
-              </Link>
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    isActive('/my-bookings') 
+                      ? 'bg-theater-primary text-white' 
+                      : 'text-gray-300 hover:bg-theater-primary/20 hover:text-white'
+                  }`}
+                >
+                  My Bookings
+                </Link>
+                <Link
+                  href="/admin/dashboard"
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    isActive('/admin/dashboard') 
+                      ? 'bg-theater-primary text-white' 
+                      : 'text-gray-300 hover:bg-theater-primary/20 hover:text-white'
+                  }`}
+                >
+                  Admin
+                </Link>
             </div>
           </div>
 
@@ -143,6 +153,17 @@ const Navigation = () => {
             onClick={() => setIsMenuOpen(false)}
           >
             My Bookings
+          </Link>
+          <Link
+            href="/admin/dashboard"
+            className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
+              isActive('/admin/dashboard') 
+                ? 'bg-theater-primary text-white' 
+                : 'text-gray-300 hover:bg-theater-primary/20 hover:text-white'
+            }`}
+            onClick={() => setIsMenuOpen(false)}
+          >
+            Admin
           </Link>
         </div>
       </div>
