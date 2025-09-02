@@ -1,74 +1,116 @@
 version: '3.8'
 
 services:
-  website:
-    build: ./theater-website
+  # Frontend - Theater Website
+  theater-website:
+    build: 
+      context: ./theater-website
+      dockerfile: Dockerfile
     container_name: theater-website
     ports:
       - "3000:3000"
-    depends_on:
-      - theater-backend
     environment:
-      - NEXT_PUBLIC_API_URL=http://theater-website-backend:8080  
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
+      - NODE_ENV=production
+    depends_on:
+      theater-backend:
+        condition: service_healthy
     networks:
-      - app-network
+      - theater-network
+    restart: unless-stopped
 
+  # Backend - Theater API
   theater-backend:
-    build: ./theater
+    build:
+      context: ./theater
+      dockerfile: Dockerfile
     container_name: theater-backend
     ports:
       - "8080:8080"
     environment:
-      - DB_HOST=mysql
-      - DB_USER=user
-      - DB_PASSWORD=password
-      - DB_NAME=mydb
-      - REDIS_URL=redis:6379
+      - DB_HOST=mysql-theater
+      - DB_PORT=3306
+      - DB_USER=theater_user
+      - DB_PASSWORD=theater_password
+      - DB_NAME=theater_booking
+      - REDIS_URL=redis-theater:6379
+      - REDIS_PASSWORD=theater_redis_pass
+      - GO_ENV=production
     depends_on:
-      redis:
+      mysql-theater:
         condition: service_healthy
-      mysql:
+      redis-theater:
         condition: service_healthy
     networks:
-      - app-network
+      - theater-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
-  redis:
-    image: redis:alpine
-    container_name: redis-theater-cache
+  # Redis Cache with Persistence
+  redis-theater:
+    image: redis:7-alpine
+    container_name: redis-theater
     ports:
       - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 3
+    command: redis-server --appendonly yes --requirepass theater_redis_pass
+    environment:
+      - REDIS_PASSWORD=theater_redis_pass
     volumes:
-      - /Users/gsmayya/Code/theater-tickets/redis/data
+      - redis_data:/data
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
     networks:
-      - app-network
+      - theater-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "theater_redis_pass", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
-  mysql:
+  # MySQL Database with Initialization
+  mysql-theater:
     image: mysql:8.0
-    container_name: mysql-db-theater
+    container_name: mysql-theater
     ports:
       - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: mydb
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: theater_root_password
+      MYSQL_DATABASE: theater_booking
+      MYSQL_USER: theater_user
+      MYSQL_PASSWORD: theater_password
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
     volumes:
-      - /Users/gsmayya/Code/theater-tickets/mysql-data/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 5s
-      timeout: 3s
-      retries: 3
+      - mysql_data:/var/lib/mysql
+      - ./theater/scripts/init-db.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
     networks:
-      - app-network
+      - theater-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "theater_user", "-ptheater_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
 
+# Named volumes for data persistence
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
 
+# Custom network
 networks:
-  app-network:
+  theater-network:
+    driver: bridge
 
 

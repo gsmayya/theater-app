@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -18,6 +19,10 @@ type ShowData struct {
 	Total_Tickets  int32     `json:"total_tickets"`
 	Location       string    `json:"location"`
 	Booked_Tickets int32     `json:"booked_tickets"`
+	ShowNumber     string    `json:"show_number"`
+	ShowDate       time.Time `json:"show_date"`
+	Images         []string  `json:"images,omitempty"`        // CMS image IDs
+	Videos         []string  `json:"videos,omitempty"`        // CMS video IDs
 }
 
 func (s *ShowData) NewShow(name string, details string, price int32, total_tickets int32, location string) *ShowData {
@@ -28,8 +33,11 @@ func (s *ShowData) NewShow(name string, details string, price int32, total_ticke
 	s.Location = location
 	s.Name = name
 	s.Details = details
+	s.ShowNumber = fmt.Sprintf("SH-%d", time.Now().Unix()) // Generate show number
+	s.ShowDate = time.Now().AddDate(0, 0, 30) // Default 30 days from now
+	s.Images = []string{}
+	s.Videos = []string{}
 	return s
-
 }
 
 func (s *ShowData) NewShowFromPut(r *http.Request) *ShowData {
@@ -48,6 +56,20 @@ func (s *ShowData) NewShowFromPut(r *http.Request) *ShowData {
 	}
 
 	showLocation := r.URL.Query().Get("location")
+	showNumber := r.URL.Query().Get("show_number")
+	showDateStr := r.URL.Query().Get("show_date")
+	
+	// Parse show date
+	var showDate time.Time
+	if showDateStr != "" {
+		if parsedDate, err := time.Parse(time.RFC3339, showDateStr); err == nil {
+			showDate = parsedDate
+		} else {
+			showDate = time.Now().AddDate(0, 0, 30) // Default 30 days from now
+		}
+	} else {
+		showDate = time.Now().AddDate(0, 0, 30)
+	}
 
 	s.Show_Id = uuid.New()
 	s.Booked_Tickets = 0
@@ -56,10 +78,19 @@ func (s *ShowData) NewShowFromPut(r *http.Request) *ShowData {
 	s.Location = showLocation
 	s.Name = showName
 	s.Details = showDetails
+	s.ShowNumber = showNumber
+	if s.ShowNumber == "" {
+		s.ShowNumber = fmt.Sprintf("SH-%d", time.Now().Unix())
+	}
+	s.ShowDate = showDate
+	s.Images = []string{}
+	s.Videos = []string{}
 	return s
 }
 
 func (s *ShowData) ShowToMap() map[string]string {
+	imagesJson, _ := json.Marshal(s.Images)
+	videosJson, _ := json.Marshal(s.Videos)
 	return map[string]string{
 		"show_id":        s.Show_Id.String(),
 		"name":           s.Name,
@@ -68,6 +99,10 @@ func (s *ShowData) ShowToMap() map[string]string {
 		"total_tickets":  fmt.Sprintf("%d", s.Total_Tickets),
 		"location":       s.Location,
 		"booked_tickets": fmt.Sprintf("%d", s.Booked_Tickets),
+		"show_number":    s.ShowNumber,
+		"show_date":      s.ShowDate.Format(time.RFC3339),
+		"images":         string(imagesJson),
+		"videos":         string(videosJson),
 	}
 }
 

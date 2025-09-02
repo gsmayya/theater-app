@@ -17,13 +17,29 @@ type RedisAccess struct {
 
 func NewClient(url string) *RedisAccess {
 	log.Println("Connecting to Redis at ", url)
+	
+	// Get Redis password from environment
+	redisPassword := GetEnvOrDefault("REDIS_PASSWORD", "theater_redis_pass")
+	
 	client := redis.NewClient(&redis.Options{
-		Addr:     url,
-		Password: "", // no password set
-		DB:       0,  // use default DB
+		Addr:         url,
+		Password:     redisPassword,
+		DB:           0, // use default DB
+		PoolSize:     10,
+		MinIdleConns: 5,
+		MaxRetries:   3,
 	})
-	addInstrumentation(client)
+	
+	// Test the connection
 	ctx := context.Background()
+	_, err := client.Ping(ctx).Result()
+	if err != nil {
+		log.Printf("Failed to connect to Redis: %v", err)
+		// Don't panic in production, but log the error
+		log.Printf("Redis connection will be retried on next access")
+	}
+	
+	addInstrumentation(client)
 	return &RedisAccess{client: client, context: &ctx, url: url}
 }
 

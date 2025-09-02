@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -40,9 +41,12 @@ func NewShowRepository() *ShowRepository {
 
 // CreateShow inserts a new show into the database
 func (r *ShowRepository) CreateShow(show *shows.ShowData) error {
+	imagesJSON, _ := json.Marshal(show.Images)
+	videosJSON, _ := json.Marshal(show.Videos)
+	
 	query := `
-		INSERT INTO shows (id, name, details, price, total_tickets, booked_tickets, location)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO shows (id, name, details, price, total_tickets, booked_tickets, location, show_number, show_date, images, videos)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err := r.database.GetDB().Exec(query,
@@ -53,6 +57,10 @@ func (r *ShowRepository) CreateShow(show *shows.ShowData) error {
 		show.Total_Tickets,
 		show.Booked_Tickets,
 		show.Location,
+		show.ShowNumber,
+		show.ShowDate,
+		string(imagesJSON),
+		string(videosJSON),
 	)
 
 	if err != nil {
@@ -75,7 +83,8 @@ func (r *ShowRepository) GetShow(showID string) (*shows.ShowData, error) {
 
 	// If not in cache, get from database
 	query := `
-		SELECT id, name, details, price, total_tickets, booked_tickets, location, created_at, updated_at
+		SELECT id, name, details, price, total_tickets, booked_tickets, location, 
+		       show_number, show_date, images, videos, created_at, updated_at
 		FROM shows 
 		WHERE id = ?
 	`
@@ -84,6 +93,7 @@ func (r *ShowRepository) GetShow(showID string) (*shows.ShowData, error) {
 
 	show := &shows.ShowData{}
 	var createdAt, updatedAt time.Time
+	var imagesJSON, videosJSON string
 
 	err := row.Scan(
 		&show.Show_Id,
@@ -93,9 +103,23 @@ func (r *ShowRepository) GetShow(showID string) (*shows.ShowData, error) {
 		&show.Total_Tickets,
 		&show.Booked_Tickets,
 		&show.Location,
+		&show.ShowNumber,
+		&show.ShowDate,
+		&imagesJSON,
+		&videosJSON,
 		&createdAt,
 		&updatedAt,
 	)
+
+	if err == nil {
+		// Parse JSON arrays for images and videos
+		if imagesJSON != "" {
+			json.Unmarshal([]byte(imagesJSON), &show.Images)
+		}
+		if videosJSON != "" {
+			json.Unmarshal([]byte(videosJSON), &show.Videos)
+		}
+	}
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -151,7 +175,8 @@ func (r *ShowRepository) GetAllShows(filters *SearchFilters, pagination *Paginat
 	baseQuery := "FROM shows"
 	countQuery := "SELECT COUNT(*) " + baseQuery
 	selectQuery := `
-		SELECT id, name, details, price, total_tickets, booked_tickets, location, created_at, updated_at 
+		SELECT id, name, details, price, total_tickets, booked_tickets, location, 
+		       show_number, show_date, images, videos, created_at, updated_at 
 		` + baseQuery
 
 	if len(whereConditions) > 0 {
@@ -184,6 +209,7 @@ func (r *ShowRepository) GetAllShows(filters *SearchFilters, pagination *Paginat
 	for rows.Next() {
 		show := &shows.ShowData{}
 		var createdAt, updatedAt time.Time
+		var imagesJSON, videosJSON string
 
 		err := rows.Scan(
 			&show.Show_Id,
@@ -193,9 +219,23 @@ func (r *ShowRepository) GetAllShows(filters *SearchFilters, pagination *Paginat
 			&show.Total_Tickets,
 			&show.Booked_Tickets,
 			&show.Location,
+			&show.ShowNumber,
+			&show.ShowDate,
+			&imagesJSON,
+			&videosJSON,
 			&createdAt,
 			&updatedAt,
 		)
+
+		if err == nil {
+			// Parse JSON arrays for images and videos
+			if imagesJSON != "" {
+				json.Unmarshal([]byte(imagesJSON), &show.Images)
+			}
+			if videosJSON != "" {
+				json.Unmarshal([]byte(videosJSON), &show.Videos)
+			}
+		}
 
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan show: %w", err)
@@ -263,9 +303,13 @@ func (r *ShowRepository) GetShowsByPriceRange(minPrice, maxPrice int32, location
 
 // UpdateShow updates an existing show
 func (r *ShowRepository) UpdateShow(show *shows.ShowData) error {
+	imagesJSON, _ := json.Marshal(show.Images)
+	videosJSON, _ := json.Marshal(show.Videos)
+	
 	query := `
 		UPDATE shows 
-		SET name = ?, details = ?, price = ?, total_tickets = ?, booked_tickets = ?, location = ?, updated_at = CURRENT_TIMESTAMP
+		SET name = ?, details = ?, price = ?, total_tickets = ?, booked_tickets = ?, location = ?, 
+		    show_number = ?, show_date = ?, images = ?, videos = ?, updated_at = CURRENT_TIMESTAMP
 		WHERE id = ?
 	`
 
@@ -276,6 +320,10 @@ func (r *ShowRepository) UpdateShow(show *shows.ShowData) error {
 		show.Total_Tickets,
 		show.Booked_Tickets,
 		show.Location,
+		show.ShowNumber,
+		show.ShowDate,
+		string(imagesJSON),
+		string(videosJSON),
 		show.Show_Id.String(),
 	)
 
