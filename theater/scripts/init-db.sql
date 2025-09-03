@@ -11,12 +11,12 @@ USE theater_booking;
 -- Shows table with updated structure
 CREATE TABLE IF NOT EXISTS shows (
     id VARCHAR(36) PRIMARY KEY,                    -- UUID as string
-    name VARCHAR(255) NOT NULL,                    -- Show name/title
+    show_name VARCHAR(255) NOT NULL,                    -- Show name/title
     details TEXT,                                  -- Show description
     price INT NOT NULL,                            -- Ticket price in cents or smallest currency unit
     total_tickets INT NOT NULL,                    -- Total available tickets
     booked_tickets INT DEFAULT 0,                  -- Currently booked tickets
-    location VARCHAR(255) NOT NULL,                -- Show location
+    show_location VARCHAR(255) NOT NULL,                -- Show location
     show_number VARCHAR(50) NOT NULL UNIQUE,       -- Unique show number (e.g., SH-123456)
     show_date DATETIME NOT NULL,                   -- Date and time of the show
     images JSON,                                   -- Array of CMS image IDs
@@ -25,14 +25,14 @@ CREATE TABLE IF NOT EXISTS shows (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
     -- Indexes for performance
-    INDEX idx_shows_location (location),
+    INDEX idx_shows_show_location (show_location),
     INDEX idx_shows_price (price),
     INDEX idx_shows_date (show_date),
     INDEX idx_shows_availability ((total_tickets - booked_tickets)),
     INDEX idx_shows_show_number (show_number),
     
     -- Full-text search index for show names and details
-    FULLTEXT(name, details)
+    FULLTEXT(show_name, details)
 ) ENGINE=InnoDB;
 
 -- Bookings table
@@ -113,12 +113,12 @@ DELIMITER ;
 -- Insert sample data for testing (optional)
 INSERT IGNORE INTO shows (
     id, 
-    name, 
+    show_name, 
     details, 
     price, 
     total_tickets, 
     booked_tickets, 
-    location, 
+    show_location, 
     show_number, 
     show_date,
     images,
@@ -211,13 +211,14 @@ INSERT IGNORE INTO bookings (
 );
 
 -- Create views for common queries
-CREATE VIEW IF NOT EXISTS show_booking_summary AS
+DROP VIEW IF EXISTS show_booking_summary;
+CREATE VIEW show_booking_summary AS
 SELECT 
     s.id as show_id,
-    s.name as show_name,
+    s.show_name,
     s.show_number,
     s.show_date,
-    s.location,
+    s.show_location,
     s.price,
     s.total_tickets,
     s.booked_tickets,
@@ -230,13 +231,14 @@ SELECT
     COUNT(CASE WHEN b.status = 'cancelled' THEN 1 END) as cancelled_bookings
 FROM shows s
 LEFT JOIN bookings b ON s.id = b.show_id
-GROUP BY s.id, s.name, s.show_number, s.show_date, s.location, s.price, s.total_tickets, s.booked_tickets;
+GROUP BY s.id, s.show_name, s.show_number, s.show_date, s.show_location, s.price, s.total_tickets, s.booked_tickets;
 
-CREATE VIEW IF NOT EXISTS recent_bookings AS
+DROP VIEW IF EXISTS recent_bookings;
+CREATE VIEW recent_bookings AS
 SELECT 
     b.booking_id,
     b.show_id,
-    s.name as show_name,
+    s.show_name,
     s.show_number,
     s.show_date,
     b.contact_type,
