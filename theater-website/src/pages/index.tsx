@@ -63,7 +63,7 @@ const HomePage = () => {
 
   if (loading) {
     return (
-      <Layout title="Current Shows - Theater Hub">
+      <Layout title="Current Shows - Illuminating Windows">
         <div className="flex justify-center items-center min-h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-theater-primary"></div>
         </div>
@@ -73,7 +73,7 @@ const HomePage = () => {
 
   if (error) {
     return (
-      <Layout title="Current Shows - Theater Hub">
+      <Layout title="Current Shows - Illuminating Windows">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
             <strong className="font-bold">Error: </strong>
@@ -85,13 +85,13 @@ const HomePage = () => {
   }
 
   return (
-    <Layout title="Current Shows - Theater Hub">
+    <Layout title="Current Shows - Illuminating Windows">
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-theater-primary to-theater-secondary text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
             <h1 className="text-4xl md:text-6xl font-bold mb-4">
-              Welcome to Theater Hub
+              Welcome to Illuminating Windows
             </h1>
             <p className="text-xl md:text-2xl mb-8 opacity-90">
               Discover amazing live performances and book your tickets today

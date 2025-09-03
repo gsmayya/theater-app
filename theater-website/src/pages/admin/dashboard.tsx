@@ -40,7 +40,7 @@ const AdminDashboard: React.FC = () => {
 
   if (!isAuthenticated) {
     return (
-      <Layout title="Admin Dashboard - Theater Hub">
+      <Layout title="Admin Dashboard - Illuminating Windows">
         <div className="flex justify-center items-center min-h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-theater-primary"></div>
         </div>
@@ -49,7 +49,7 @@ const AdminDashboard: React.FC = () => {
   }
 
   return (
-    <Layout title="Admin Dashboard - Theater Hub">
+    <Layout title="Admin Dashboard - Illuminating Windows">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">

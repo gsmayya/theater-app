@@ -10,7 +10,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ 
   children, 
-  title = 'Theater Hub - Your Gateway to Live Entertainment',
+  title = 'Illuminating Windows - Your Gateway to Live Entertainment',
   description = 'Book tickets for the best theater shows in town. Discover upcoming performances, view show schedules, and secure your seats today.'
 }) => {
   return (
@@ -36,7 +36,7 @@ const Layout: React.FC<LayoutProps> = ({
               <div>
                 <div className="flex items-center mb-4">
                   <span className="text-2xl font-bold text-theater-primary">
-                    🎭 Theater Hub
+                    🎭 Illuminating Windows
                   </span>
                 </div>
                 <p className="text-gray-300 mb-4">
@@ -75,15 +75,15 @@ const Layout: React.FC<LayoutProps> = ({
                   Contact Us
                 </h3>
                 <div className="space-y-2 text-gray-300">
-                  <p>📧 info@theaterhub.com</p>
-                  <p>📞 (555) 123-4567</p>
-                  <p>📍 123 Theater District, City, ST 12345</p>
+                  <p>📧 iw@gmail.com</p>
+                  <p>📞 +91 99999 99999</p>
+                  <p>📍 123 Abc Road, Bangalore, Karnataka</p>
                 </div>
               </div>
             </div>
             
             <div className="border-t border-gray-700 mt-8 pt-6 text-center text-gray-400">
-              <p>&copy; 2024 Theater Hub. All rights reserved.</p>
+              <p>&copy; 2025 IW. All rights reserved.</p>
             </div>
           </div>
         </footer>

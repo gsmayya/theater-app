@@ -22,7 +22,7 @@ const Navigation = () => {
           <div className="flex-shrink-0">
             <Link href="/" className="flex items-center">
               <span className="text-2xl font-bold text-theater-primary">
-                🎭 Theater Hub
+                🎭 Illuminating Windows
               </span>
             </Link>
           </div>

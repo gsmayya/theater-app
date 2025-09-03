@@ -1,4 +1,4 @@
-# Theater Hub - Theater Show Management System
+# Illuminating Windows Theater Hub - Theater Show Management System
 
 A Next.js application for managing theater shows with calendar views, ticket booking, and QR code generation.
 

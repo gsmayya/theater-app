@@ -75,7 +75,7 @@ const BookingPage: React.FC = () => {
   };
 
   return (
-    <Layout title="Book Tickets - Theater Hub">
+    <Layout title="Book Tickets - Illuminating Windows">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {!isAuthenticated ? (
           <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
