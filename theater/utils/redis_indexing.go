@@ -34,8 +34,8 @@ func NewIndexedRedisClient() *IndexedRedisClient {
 // ShowIndexData represents the data structure for show indexing
 type ShowIndexData struct {
 	ID               string `json:"id"`
-	Name             string `json:"name"`
-	Location         string `json:"location"`
+	ShowName         string `json:"show_name"`
+	ShowLocation     string `json:"show_location"`
 	Price            int32  `json:"price"`
 	AvailableTickets int32  `json:"available_tickets"`
 	TotalTickets     int32  `json:"total_tickets"`
@@ -48,7 +48,7 @@ func (irc *IndexedRedisClient) IndexShow(show ShowIndexData) error {
 	pipe := irc.client.Pipeline()
 
 	// Index by location (set of show IDs for each location)
-	locationKey := ShowsByLocationPrefix + strings.ToLower(show.Location)
+	locationKey := ShowsByLocationPrefix + strings.ToLower(show.ShowLocation)
 	pipe.SAdd(ctx, locationKey, show.ID)
 
 	// Index by price (sorted set with price as score)
@@ -67,7 +67,7 @@ func (irc *IndexedRedisClient) IndexShow(show ShowIndexData) error {
 	pipe.SAdd(ctx, ShowsAllKey, show.ID)
 
 	// Index searchable terms (for simple text search)
-	searchTerms := extractSearchTerms(show.Name + " " + show.Details)
+	searchTerms := extractSearchTerms(show.ShowName + " " + show.Details)
 	for _, term := range searchTerms {
 		searchKey := ShowsSearchPrefix + strings.ToLower(term)
 		pipe.SAdd(ctx, searchKey, show.ID)
@@ -89,17 +89,17 @@ func (irc *IndexedRedisClient) IndexShow(show ShowIndexData) error {
 		return err
 	}
 
-	log.Printf("Successfully indexed show: %s (%s)", show.Name, show.ID)
+	log.Printf("Successfully indexed show: %s (%s)", show.ShowName, show.ID)
 	return nil
 }
 
 // RemoveShowFromIndexes removes a show from all indexes
-func (irc *IndexedRedisClient) RemoveShowFromIndexes(showID string, location string) error {
+func (irc *IndexedRedisClient) RemoveShowFromIndexes(showID string, showLocation string) error {
 	ctx := *irc.context
 	pipe := irc.client.Pipeline()
 
 	// Remove from location index
-	locationKey := ShowsByLocationPrefix + strings.ToLower(location)
+	locationKey := ShowsByLocationPrefix + strings.ToLower(showLocation)
 	pipe.SRem(ctx, locationKey, showID)
 
 	// Remove from price index
@@ -128,9 +128,9 @@ func (irc *IndexedRedisClient) RemoveShowFromIndexes(showID string, location str
 }
 
 // SearchShowsByLocation retrieves show IDs by location using Redis sets
-func (irc *IndexedRedisClient) SearchShowsByLocation(location string) ([]string, error) {
+func (irc *IndexedRedisClient) SearchShowsByLocation(show_location string) ([]string, error) {
 	ctx := *irc.context
-	locationKey := ShowsByLocationPrefix + strings.ToLower(location)
+	locationKey := ShowsByLocationPrefix + strings.ToLower(show_location)
 
 	showIDs, err := irc.client.SMembers(ctx, locationKey).Result()
 	if err != nil {
@@ -257,14 +257,14 @@ func (irc *IndexedRedisClient) GetShowsByIDs(showIDs []string) ([]ShowIndexData,
 }
 
 // CombinedSearch performs a complex search combining multiple criteria
-func (irc *IndexedRedisClient) CombinedSearch(location string, minPrice, maxPrice int32, minAvailable int32, searchTerm string) ([]string, error) {
+func (irc *IndexedRedisClient) CombinedSearch(show_location string, minPrice, maxPrice int32, minAvailable int32, searchTerm string) ([]string, error) {
 	ctx := *irc.context
 	var keys []string
 	tempKeys := []string{}
 
 	// Collect all criteria keys
-	if location != "" {
-		keys = append(keys, ShowsByLocationPrefix+strings.ToLower(location))
+	if show_location != "" {
+		keys = append(keys, ShowsByLocationPrefix+strings.ToLower(show_location))
 	}
 
 	// Handle price range

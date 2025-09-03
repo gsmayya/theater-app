@@ -18,7 +18,7 @@ type ShowService struct {
 
 // SearchRequest represents a search query with all possible filters
 type SearchRequest struct {
-	Location      string `json:"location,omitempty"`
+	ShowLocation  string `json:"show_location,omitempty"`
 	MinPrice      *int32 `json:"min_price,omitempty"`
 	MaxPrice      *int32 `json:"max_price,omitempty"`
 	MinAvailable  *int32 `json:"min_available,omitempty"`
@@ -46,10 +46,10 @@ func NewShowService() *ShowService {
 }
 
 // CreateShow creates a new show with full indexing
-func (s *ShowService) CreateShow(name, details, location string, price, totalTickets int32) (*shows.ShowData, error) {
+func (s *ShowService) CreateShow(show_name, details, show_location string, price, totalTickets int32) (*shows.ShowData, error) {
 	// Create show data
 	show := &shows.ShowData{}
-	show.NewShow(name, details, price, totalTickets, location)
+	show.NewShow(show_name, details, price, totalTickets, show_location)
 
 	// Save to database
 	if err := s.repository.CreateShow(show); err != nil {
@@ -59,8 +59,8 @@ func (s *ShowService) CreateShow(name, details, location string, price, totalTic
 	// Index in Redis for fast searches
 	indexData := utils.ShowIndexData{
 		ID:               show.Show_Id.String(),
-		Name:             show.Name,
-		Location:         show.Location,
+		ShowName:         show.ShowName,
+		ShowLocation:     show.ShowLocation,
 		Price:            show.Price,
 		AvailableTickets: show.Total_Tickets - show.Booked_Tickets,
 		TotalTickets:     show.Total_Tickets,
@@ -72,7 +72,7 @@ func (s *ShowService) CreateShow(name, details, location string, price, totalTic
 		// Don't fail the entire operation for indexing errors
 	}
 
-	log.Printf("Successfully created show: %s (ID: %s)", show.Name, show.Show_Id.String())
+	log.Printf("Successfully created show: %s (ID: %s)", show.ShowName, show.Show_Id.String())
 	return show, nil
 }
 
@@ -114,14 +114,18 @@ func (s *ShowService) SearchShows(req SearchRequest) (*SearchResponse, error) {
 	return s.searchWithDatabase(req)
 }
 
+func (s *ShowService) GetAllShows() ([]*shows.ShowData, error) {
+	return s.GetShowsByPriceRange(0, 100000, "")
+}
+
 // GetShowsByLocation uses Redis indexing for location-based searches
-func (s *ShowService) GetShowsByLocation(location string, onlyAvailable bool) ([]*shows.ShowData, error) {
-	if location == "" {
+func (s *ShowService) GetShowsByLocation(show_location string, onlyAvailable bool) ([]*shows.ShowData, error) {
+	if show_location == "" {
 		return nil, fmt.Errorf("location cannot be empty")
 	}
 
 	// Try Redis first for fast results
-	showIDs, err := s.redisIndex.SearchShowsByLocation(location)
+	showIDs, err := s.redisIndex.SearchShowsByLocation(show_location)
 	if err == nil && len(showIDs) > 0 {
 		// Get show data from Redis
 		indexedShows, err := s.redisIndex.GetShowsByIDs(showIDs)
@@ -140,11 +144,11 @@ func (s *ShowService) GetShowsByLocation(location string, onlyAvailable bool) ([
 	}
 
 	// Fall back to database query
-	return s.repository.GetShowsByLocation(location, onlyAvailable)
+	return s.repository.GetShowsByLocation(show_location, onlyAvailable)
 }
 
 // GetShowsByPriceRange uses Redis sorted sets for efficient price range queries
-func (s *ShowService) GetShowsByPriceRange(minPrice, maxPrice int32, location string) ([]*shows.ShowData, error) {
+func (s *ShowService) GetShowsByPriceRange(minPrice, maxPrice int32, show_location string) ([]*shows.ShowData, error) {
 	if minPrice < 0 || maxPrice < 0 {
 		return nil, fmt.Errorf("price values cannot be negative")
 	}
@@ -156,8 +160,8 @@ func (s *ShowService) GetShowsByPriceRange(minPrice, maxPrice int32, location st
 	showIDs, err := s.redisIndex.SearchShowsByPriceRange(minPrice, maxPrice)
 	if err == nil {
 		// Filter by location if specified
-		if location != "" {
-			locationIDs, err := s.redisIndex.SearchShowsByLocation(location)
+		if show_location != "" {
+			locationIDs, err := s.redisIndex.SearchShowsByLocation(show_location)
 			if err == nil {
 				showIDs = intersectSlices(showIDs, locationIDs)
 			}
@@ -176,7 +180,7 @@ func (s *ShowService) GetShowsByPriceRange(minPrice, maxPrice int32, location st
 	}
 
 	// Fall back to database
-	return s.repository.GetShowsByPriceRange(minPrice, maxPrice, location)
+	return s.repository.GetShowsByPriceRange(minPrice, maxPrice, show_location)
 }
 
 // UpdateShow updates a show and maintains all indexes
@@ -189,8 +193,8 @@ func (s *ShowService) UpdateShow(show *shows.ShowData) error {
 	// Update Redis indexes
 	indexData := utils.ShowIndexData{
 		ID:               show.Show_Id.String(),
-		Name:             show.Name,
-		Location:         show.Location,
+		ShowName:         show.ShowName,
+		ShowLocation:     show.ShowLocation,
 		Price:            show.Price,
 		AvailableTickets: show.Total_Tickets - show.Booked_Tickets,
 		TotalTickets:     show.Total_Tickets,
@@ -243,7 +247,7 @@ func (s *ShowService) DeleteShow(showID string) error {
 	}
 
 	// Remove from Redis indexes
-	if err := s.redisIndex.RemoveShowFromIndexes(showID, show.Location); err != nil {
+	if err := s.redisIndex.RemoveShowFromIndexes(showID, show.ShowLocation); err != nil {
 		log.Printf("Warning: Failed to remove show from Redis indexes: %v", err)
 	}
 
@@ -259,7 +263,7 @@ func (s *ShowService) GetSearchStatistics() (map[string]interface{}, error) {
 
 func (s *ShowService) shouldUseRedisIndex(req SearchRequest) bool {
 	// Use Redis when we have specific criteria that benefit from indexing
-	return req.Location != "" ||
+	return req.ShowLocation != "" ||
 		req.MinPrice != nil ||
 		req.MaxPrice != nil ||
 		req.MinAvailable != nil ||
@@ -280,7 +284,7 @@ func (s *ShowService) searchWithRedisIndex(req SearchRequest) (*SearchResponse, 
 	}
 
 	// Perform combined search using Redis
-	showIDs, err := s.redisIndex.CombinedSearch(req.Location, minPrice, maxPrice, minAvailable, req.SearchTerm)
+	showIDs, err := s.redisIndex.CombinedSearch(req.ShowLocation, minPrice, maxPrice, minAvailable, req.SearchTerm)
 	if err != nil {
 		log.Printf("Redis search failed, falling back to database: %v", err)
 		return s.searchWithDatabase(req)
@@ -338,7 +342,7 @@ func (s *ShowService) searchWithRedisIndex(req SearchRequest) (*SearchResponse, 
 func (s *ShowService) searchWithDatabase(req SearchRequest) (*SearchResponse, error) {
 	// Convert request to repository filters
 	filters := &repository.SearchFilters{
-		Location:      req.Location,
+		ShowLocation:  req.ShowLocation,
 		MinPrice:      req.MinPrice,
 		MaxPrice:      req.MaxPrice,
 		MinAvailable:  req.MinAvailable,
@@ -369,12 +373,12 @@ func (s *ShowService) convertFromIndexed(indexed utils.ShowIndexData) *shows.Sho
 	showID, _ := uuid.Parse(indexed.ID)
 	return &shows.ShowData{
 		Show_Id:        showID,
-		Name:           indexed.Name,
+		ShowName:       indexed.ShowName,
 		Details:        indexed.Details,
 		Price:          indexed.Price,
 		Total_Tickets:  indexed.TotalTickets,
 		Booked_Tickets: indexed.TotalTickets - indexed.AvailableTickets,
-		Location:       indexed.Location,
+		ShowLocation:   indexed.ShowLocation,
 	}
 }
 

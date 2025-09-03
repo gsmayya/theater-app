@@ -11,36 +11,31 @@ import (
 
 func main() {
 	fmt.Println("Starting Optimized Theater Booking Service...")
-	
+
 	// Initialize database connection
 	database := db.GetDatabase()
 	defer database.Close()
-	
+
 	// Test database connection
 	if err := database.Ping(); err != nil {
 		log.Printf("Warning: Database connection failed: %v", err)
 	} else {
 		log.Println("Database connection established successfully")
 	}
-	
+
 	// Initialize the service layer
 	handlers.InitializeService()
 	handlers.InitializeBookingService()
-	
-	// Original endpoints (backward compatibility)
-	http.HandleFunc("/", handlers.DefaultHandler)
-	http.HandleFunc("/status", handlers.DefaultHandler)
-	http.HandleFunc("/shows", handlers.ShowListHandler)
-	http.HandleFunc("/show", handlers.ShowHandler)
-	
+
 	// Show management endpoints
 	http.HandleFunc("/api/v1/search", handlers.SearchShowsHandler)
+	http.HandleFunc("/api/v1/shows", handlers.ShowsByAllHandler)
 	http.HandleFunc("/api/v1/shows/by-location", handlers.ShowsByLocationHandler)
 	http.HandleFunc("/api/v1/shows/by-price-range", handlers.ShowsByPriceRangeHandler)
 	http.HandleFunc("/api/v1/shows/create", handlers.CreateShowHandler)
 	http.HandleFunc("/api/v1/shows/get", handlers.GetShowHandler)
 	http.HandleFunc("/api/v1/shows/update-availability", handlers.UpdateShowAvailabilityHandler)
-	
+
 	// Booking management endpoints
 	http.HandleFunc("/api/v1/bookings/create", handlers.CreateBookingHandler)
 	http.HandleFunc("/api/v1/bookings/get", handlers.GetBookingHandler)
@@ -52,11 +47,11 @@ func main() {
 	http.HandleFunc("/api/v1/bookings/search", handlers.SearchBookingsHandler)
 	http.HandleFunc("/api/v1/bookings/stats", handlers.GetBookingStatsHandler)
 	http.HandleFunc("/api/v1/shows/booking-summary", handlers.GetShowBookingSummaryHandler)
-	
+
 	// System endpoints
 	http.HandleFunc("/api/v1/stats", handlers.GetSearchStatsHandler)
 	http.HandleFunc("/api/v1/health", handlers.HealthCheckHandler)
-	
+
 	log.Println("🎭 Theater Booking System Server starting at :8080")
 	log.Println("Available endpoints:")
 	log.Println("")
@@ -65,6 +60,7 @@ func main() {
 	log.Println("")
 	log.Println("  🎪 Show management:")
 	log.Println("    /api/v1/search - Advanced show search")
+	log.Println("    /api/v1/shows - Get all shows")
 	log.Println("    /api/v1/shows/by-location - Shows by location")
 	log.Println("    /api/v1/shows/by-price-range - Shows by price range")
 	log.Println("    /api/v1/shows/create - Create new show")
@@ -86,6 +82,6 @@ func main() {
 	log.Println("  📊 System endpoints:")
 	log.Println("    /api/v1/stats - Search statistics")
 	log.Println("    /api/v1/health - Health check")
-	
+
 	log.Fatal(http.ListenAndServe("0.0.0.0:8080", nil))
 }

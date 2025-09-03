@@ -68,6 +68,28 @@ func SearchShowsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+func ShowsByAllHandler(w http.ResponseWriter, r *http.Request) {
+	if showService == nil {
+		InitializeService()
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	shows, err := showService.GetAllShows()
+	if err != nil {
+		log.Printf("Error getting all shows: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"shows": shows,
+		"count": len(shows),
+	})
+}
+
 // ShowsByLocationHandler handles location-based searches using indexes
 func ShowsByLocationHandler(w http.ResponseWriter, r *http.Request) {
 	if showService == nil {
@@ -77,15 +99,15 @@ func ShowsByLocationHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	location := r.URL.Query().Get("location")
-	if location == "" {
+	show_location := r.URL.Query().Get("show_location")
+	if show_location == "" {
 		http.Error(w, "Location parameter is required", http.StatusBadRequest)
 		return
 	}
 
 	onlyAvailable := r.URL.Query().Get("only_available") == "true"
 
-	shows, err := showService.GetShowsByLocation(location, onlyAvailable)
+	shows, err := showService.GetShowsByLocation(show_location, onlyAvailable)
 	if err != nil {
 		log.Printf("Error getting shows by location: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -94,9 +116,9 @@ func ShowsByLocationHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"shows":    shows,
-		"location": location,
-		"count":    len(shows),
+		"shows":         shows,
+		"show_location": show_location,
+		"count":         len(shows),
 	})
 }
 
@@ -264,7 +286,7 @@ func UpdateShowAvailabilityHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{
-		"status": "success",
+		"status":  "success",
 		"message": "Show availability updated",
 	})
 }
@@ -310,8 +332,8 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 // Helper function to parse search parameters from query string
 func parseSearchParams(r *http.Request) service.SearchRequest {
 	req := service.SearchRequest{}
-	
-	req.Location = r.URL.Query().Get("location")
+
+	req.ShowLocation = r.URL.Query().Get("location")
 	req.SearchTerm = r.URL.Query().Get("search")
 	req.OnlyAvailable = r.URL.Query().Get("only_available") == "true"
 

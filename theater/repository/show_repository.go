@@ -19,7 +19,7 @@ type ShowRepository struct {
 }
 
 type SearchFilters struct {
-	Location      string
+	ShowLocation  string
 	MinPrice      *int32
 	MaxPrice      *int32
 	MinAvailable  *int32
@@ -43,7 +43,7 @@ func NewShowRepository() *ShowRepository {
 func (r *ShowRepository) CreateShow(show *shows.ShowData) error {
 	imagesJSON, _ := json.Marshal(show.Images)
 	videosJSON, _ := json.Marshal(show.Videos)
-	
+
 	query := `
 		INSERT INTO shows (id, name, details, price, total_tickets, booked_tickets, location, show_number, show_date, images, videos)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -51,12 +51,12 @@ func (r *ShowRepository) CreateShow(show *shows.ShowData) error {
 
 	_, err := r.database.GetDB().Exec(query,
 		show.Show_Id.String(),
-		show.Name,
+		show.ShowName,
 		show.Details,
 		show.Price,
 		show.Total_Tickets,
 		show.Booked_Tickets,
-		show.Location,
+		show.ShowLocation,
 		show.ShowNumber,
 		show.ShowDate,
 		string(imagesJSON),
@@ -70,7 +70,7 @@ func (r *ShowRepository) CreateShow(show *shows.ShowData) error {
 	// Cache the show data
 	r.cacheShow(show)
 
-	log.Printf("Show created successfully: %s", show.Name)
+	log.Printf("Show created successfully: %s", show.ShowName)
 	return nil
 }
 
@@ -97,12 +97,12 @@ func (r *ShowRepository) GetShow(showID string) (*shows.ShowData, error) {
 
 	err := row.Scan(
 		&show.Show_Id,
-		&show.Name,
+		&show.ShowName,
 		&show.Details,
 		&show.Price,
 		&show.Total_Tickets,
 		&show.Booked_Tickets,
-		&show.Location,
+		&show.ShowLocation,
 		&show.ShowNumber,
 		&show.ShowDate,
 		&imagesJSON,
@@ -141,9 +141,9 @@ func (r *ShowRepository) GetAllShows(filters *SearchFilters, pagination *Paginat
 	args := []interface{}{}
 
 	if filters != nil {
-		if filters.Location != "" {
-			whereConditions = append(whereConditions, "location = ?")
-			args = append(args, filters.Location)
+		if filters.ShowLocation != "" {
+			whereConditions = append(whereConditions, "show_location = ?")
+			args = append(args, filters.ShowLocation)
 		}
 
 		if filters.MinPrice != nil {
@@ -213,12 +213,12 @@ func (r *ShowRepository) GetAllShows(filters *SearchFilters, pagination *Paginat
 
 		err := rows.Scan(
 			&show.Show_Id,
-			&show.Name,
+			&show.ShowName,
 			&show.Details,
 			&show.Price,
 			&show.Total_Tickets,
 			&show.Booked_Tickets,
-			&show.Location,
+			&show.ShowLocation,
 			&show.ShowNumber,
 			&show.ShowDate,
 			&imagesJSON,
@@ -257,18 +257,18 @@ func (r *ShowRepository) GetShowsByLocation(location string, onlyAvailable bool)
 
 	if onlyAvailable {
 		query = `
-			SELECT s.id, s.name, s.details, s.price, s.total_tickets, s.booked_tickets, s.location, s.created_at, s.updated_at
+			SELECT s.id, s.show_name, s.details, s.price, s.total_tickets, s.booked_tickets, s.show_location, s.created_at, s.updated_at
 			FROM shows s
 			INNER JOIN show_availability_index sai ON s.id = sai.show_id
-			WHERE s.location = ? AND sai.is_available = true
-			ORDER BY s.name
+			WHERE s.show_location = ? AND sai.is_available = true
+			ORDER BY s.show_name
 		`
 	} else {
 		query = `
-			SELECT id, name, details, price, total_tickets, booked_tickets, location, created_at, updated_at
+			SELECT id, show_name, details, price, total_tickets, booked_tickets, show_location, created_at, updated_at
 			FROM shows 
-			WHERE location = ?
-			ORDER BY name
+			WHERE show_location = ?
+			ORDER BY show_name
 		`
 	}
 
@@ -282,18 +282,18 @@ func (r *ShowRepository) GetShowsByPriceRange(minPrice, maxPrice int32, location
 
 	if location != "" {
 		query = `
-			SELECT id, name, details, price, total_tickets, booked_tickets, location, created_at, updated_at
+			SELECT id, show_name, details, price, total_tickets, booked_tickets, show_location, created_at, updated_at
 			FROM shows 
-			WHERE price BETWEEN ? AND ? AND location = ?
-			ORDER BY price, name
+			WHERE price BETWEEN ? AND ? AND show_location = ?
+			ORDER BY price, show_name
 		`
 		args = []interface{}{minPrice, maxPrice, location}
 	} else {
 		query = `
-			SELECT id, name, details, price, total_tickets, booked_tickets, location, created_at, updated_at
+			SELECT id, show_name, details, price, total_tickets, booked_tickets, show_location, created_at, updated_at
 			FROM shows 
 			WHERE price BETWEEN ? AND ?
-			ORDER BY price, name
+			ORDER BY price, show_name
 		`
 		args = []interface{}{minPrice, maxPrice}
 	}
@@ -305,21 +305,21 @@ func (r *ShowRepository) GetShowsByPriceRange(minPrice, maxPrice int32, location
 func (r *ShowRepository) UpdateShow(show *shows.ShowData) error {
 	imagesJSON, _ := json.Marshal(show.Images)
 	videosJSON, _ := json.Marshal(show.Videos)
-	
+
 	query := `
 		UPDATE shows 
-		SET name = ?, details = ?, price = ?, total_tickets = ?, booked_tickets = ?, location = ?, 
+		SET show_name = ?, details = ?, price = ?, total_tickets = ?, booked_tickets = ?, show_location = ?, 
 		    show_number = ?, show_date = ?, images = ?, videos = ?, updated_at = CURRENT_TIMESTAMP
 		WHERE id = ?
 	`
 
 	result, err := r.database.GetDB().Exec(query,
-		show.Name,
+		show.ShowName,
 		show.Details,
 		show.Price,
 		show.Total_Tickets,
 		show.Booked_Tickets,
-		show.Location,
+		show.ShowLocation,
 		show.ShowNumber,
 		show.ShowDate,
 		string(imagesJSON),
@@ -409,12 +409,12 @@ func (r *ShowRepository) executeShowQuery(query string, args ...interface{}) ([]
 
 		err := rows.Scan(
 			&show.Show_Id,
-			&show.Name,
+			&show.ShowName,
 			&show.Details,
 			&show.Price,
 			&show.Total_Tickets,
 			&show.Booked_Tickets,
-			&show.Location,
+			&show.ShowLocation,
 			&createdAt,
 			&updatedAt,
 		)

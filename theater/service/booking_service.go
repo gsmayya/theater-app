@@ -5,9 +5,9 @@ import (
 	"log"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gsmayya/theater/bookings"
 	"github.com/gsmayya/theater/repository"
-	"github.com/google/uuid"
 )
 
 // BookingService provides business logic for theater bookings
@@ -234,7 +234,7 @@ func (s *BookingService) GetShowBookingSummary(showID uuid.UUID) (*ShowBookingSu
 	// Calculate statistics
 	totalRevenue := int32(0)
 	bookingsByStatus := make(map[string]int32)
-	
+
 	for _, booking := range bookingsList {
 		if booking.Status == "confirmed" || booking.Status == "pending" {
 			totalRevenue += booking.TotalAmount
@@ -243,17 +243,17 @@ func (s *BookingService) GetShowBookingSummary(showID uuid.UUID) (*ShowBookingSu
 	}
 
 	summary := &ShowBookingSummary{
-		ShowID:            showID,
-		ShowName:          show.Name,
-		ShowNumber:        show.ShowNumber,
-		ShowDate:          show.ShowDate,
-		TotalTickets:      show.Total_Tickets,
-		TicketsSold:       ticketsSold,
-		TicketsAvailable:  show.Total_Tickets - ticketsSold,
-		TotalBookings:     int32(len(bookingsList)),
-		TotalRevenue:      totalRevenue,
-		BookingsByStatus:  bookingsByStatus,
-		RecentBookings:    bookingsList[:min(len(bookingsList), 5)], // Last 5 bookings
+		ShowID:           showID,
+		ShowName:         show.ShowName,
+		ShowNumber:       show.ShowNumber,
+		ShowDate:         show.ShowDate,
+		TotalTickets:     show.Total_Tickets,
+		TicketsSold:      ticketsSold,
+		TicketsAvailable: show.Total_Tickets - ticketsSold,
+		TotalBookings:    int32(len(bookingsList)),
+		TotalRevenue:     totalRevenue,
+		BookingsByStatus: bookingsByStatus,
+		RecentBookings:   bookingsList[:min(len(bookingsList), 5)], // Last 5 bookings
 	}
 
 	return summary, nil
@@ -299,17 +299,17 @@ func (s *BookingService) DeleteBooking(bookingID string) error {
 
 // ShowBookingSummary represents a comprehensive booking summary for a show
 type ShowBookingSummary struct {
-	ShowID            uuid.UUID                  `json:"show_id"`
-	ShowName          string                     `json:"show_name"`
-	ShowNumber        string                     `json:"show_number"`
-	ShowDate          time.Time                  `json:"show_date"`
-	TotalTickets      int32                      `json:"total_tickets"`
-	TicketsSold       int32                      `json:"tickets_sold"`
-	TicketsAvailable  int32                      `json:"tickets_available"`
-	TotalBookings     int32                      `json:"total_bookings"`
-	TotalRevenue      int32                      `json:"total_revenue"`
-	BookingsByStatus  map[string]int32           `json:"bookings_by_status"`
-	RecentBookings    []*bookings.Booking        `json:"recent_bookings"`
+	ShowID           uuid.UUID           `json:"show_id"`
+	ShowName         string              `json:"show_name"`
+	ShowNumber       string              `json:"show_number"`
+	ShowDate         time.Time           `json:"show_date"`
+	TotalTickets     int32               `json:"total_tickets"`
+	TicketsSold      int32               `json:"tickets_sold"`
+	TicketsAvailable int32               `json:"tickets_available"`
+	TotalBookings    int32               `json:"total_bookings"`
+	TotalRevenue     int32               `json:"total_revenue"`
+	BookingsByStatus map[string]int32    `json:"bookings_by_status"`
+	RecentBookings   []*bookings.Booking `json:"recent_bookings"`
 }
 
 // Helper function to get minimum of two integers

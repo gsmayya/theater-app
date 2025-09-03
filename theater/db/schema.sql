@@ -7,28 +7,28 @@ USE theater_booking;
 -- Shows table with optimized indexing
 CREATE TABLE IF NOT EXISTS shows (
     id VARCHAR(36) PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
+    show_name VARCHAR(255) NOT NULL,
     details TEXT,
     price INT NOT NULL,
     total_tickets INT NOT NULL,
     booked_tickets INT DEFAULT 0,
-    location VARCHAR(255) NOT NULL,
+    show_location VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
     -- Primary indexes for common search patterns
-    INDEX idx_location (location),
+    INDEX idx_show_location (show_location),
     INDEX idx_price (price),
     INDEX idx_availability (total_tickets, booked_tickets),
-    INDEX idx_name (name),
-    
+    INDEX idx_show_name (show_name),
+
     -- Composite indexes for complex queries
-    INDEX idx_location_price (location, price),
-    INDEX idx_location_availability (location, total_tickets, booked_tickets),
+    INDEX idx_location_price (show_location, price),
+    INDEX idx_location_availability (show_location, total_tickets, booked_tickets),
     INDEX idx_price_availability (price, total_tickets, booked_tickets),
     
     -- Full-text search index for show names and details
-    FULLTEXT INDEX ft_search (name, details)
+    FULLTEXT INDEX ft_search (show_name, details)
 );
 
 -- Tickets table with optimized indexing
@@ -62,13 +62,13 @@ CREATE TABLE IF NOT EXISTS tickets (
 CREATE VIEW show_availability AS
 SELECT 
     s.id,
-    s.name,
+    s.show_name,
     s.details,
     s.price,
     s.total_tickets,
     s.booked_tickets,
     (s.total_tickets - s.booked_tickets) AS available_tickets,
-    s.location,
+    s.show_location,
     s.created_at,
     s.updated_at
 FROM shows s;
@@ -117,7 +117,7 @@ END$$
 DELIMITER ;
 
 -- Insert some sample data for testing
-INSERT INTO shows (id, name, details, price, total_tickets, location) VALUES
+INSERT INTO shows (id, show_name, details, price, total_tickets, show_location) VALUES
 (UUID(), 'Hamilton', 'The revolutionary musical about Alexander Hamilton', 150, 500, 'New York'),
 (UUID(), 'The Lion King', 'Disney musical featuring the circle of life', 120, 400, 'Los Angeles'),
 (UUID(), 'Phantom of the Opera', 'The mysterious phantom haunts the opera house', 100, 300, 'Chicago'),
