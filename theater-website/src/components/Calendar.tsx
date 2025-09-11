@@ -16,7 +16,10 @@ const Calendar: React.FC<CalendarProps> = ({ shows, onDateSelect }) => {
       title: show.title,
       date: showTime.date,
       time: showTime.time,
-      showId: show.id
+      show_id: show.id,
+      location: show.location,
+      price: show.price,
+      available_tickets: show.total_tickets - show.booked_tickets
     }))
   );
 
@@ -57,7 +60,7 @@ const Calendar: React.FC<CalendarProps> = ({ shows, onDateSelect }) => {
       .toISOString().split('T')[0];
     const events = getEventsForDate(day);
     
-    if (events.length > 0 && onDateSelect) {
+    if (events.length > 0 && onDateSelect && dateString) {
       onDateSelect(dateString, events);
     }
   };

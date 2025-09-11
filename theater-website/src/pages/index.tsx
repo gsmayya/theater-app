@@ -152,7 +152,7 @@ const HomePage = () => {
                 </h3>
                 <div className="space-y-4">
                   {selectedEvents.map(event => {
-                    const show = shows.find(s => s.id === event.showId);
+                    const show = shows.find(s => s.id === event.show_id);
                     return (
                       <div
                         key={event.id}
@@ -163,7 +163,7 @@ const HomePage = () => {
                             {event.title}
                           </h4>
                           <p className="text-sm text-gray-600">
-                            {formatTime(event.time)} • {show?.venue}
+                            {formatTime(event.time)} • {show?.location}
                           </p>
                         </div>
                         <button

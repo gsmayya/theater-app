@@ -14,7 +14,17 @@ func GetEnvOrDefault(key, defaultValue string) string {
 	return val
 }
 
-func GetInt32(str string) int32 {
+func GetInt32(str string) (int32, error) {
+	val, err := strconv.ParseInt(str, 10, 32)
+	if err != nil {
+		return 0, err
+	}
+	return int32(val), nil
+}
+
+// GetInt32OrPanic is the original function that panics on error
+// Kept for backward compatibility
+func GetInt32OrPanic(str string) int32 {
 	val, err := strconv.ParseInt(str, 10, 32)
 	if err != nil {
 		log.Fatalf("Error converting string to int32: %v", err)

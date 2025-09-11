@@ -41,51 +41,28 @@ const ShowCard: React.FC<ShowCardProps> = ({ show, onBookShow }) => {
       <div className="p-6">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h3 className="text-xl font-bold text-theater-dark mb-2">{show.title}</h3>
+            <h3 className="text-xl font-bold text-theater-dark mb-2">{show.title || show.name}</h3>
             <span className="inline-block bg-theater-primary/10 text-theater-primary px-3 py-1 rounded-full text-sm font-medium">
-              {show.genre}
+              Theater Show
             </span>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-bold text-theater-primary">${show.ticketPrice}</p>
+            <p className="text-2xl font-bold text-theater-primary">${(show.price / 100).toFixed(2)}</p>
             <p className="text-sm text-gray-500">per ticket</p>
           </div>
         </div>
         
-        <p className="text-gray-600 mb-4 line-clamp-3">{show.description}</p>
+        <p className="text-gray-600 mb-4 line-clamp-3">{show.details}</p>
         
         <div className="space-y-2 mb-4">
           <div className="flex items-center text-sm text-gray-600">
-            <span className="font-medium mr-2">Director:</span> {show.director}
+            <span className="font-medium mr-2">Location:</span> {show.location}
           </div>
           <div className="flex items-center text-sm text-gray-600">
-            <span className="font-medium mr-2">Duration:</span> {show.duration} minutes
+            <span className="font-medium mr-2">Show Number:</span> {show.show_number}
           </div>
           <div className="flex items-center text-sm text-gray-600">
-            <span className="font-medium mr-2">Venue:</span> {show.venue}
-          </div>
-          <div className="flex items-center text-sm text-gray-600">
-            <span className="font-medium mr-2">Rating:</span> {show.rating}
-          </div>
-        </div>
-        
-        {/* Cast */}
-        <div className="mb-4">
-          <p className="text-sm font-medium text-gray-700 mb-2">Cast:</p>
-          <div className="flex flex-wrap gap-2">
-            {show.cast.slice(0, 3).map((actor, index) => (
-              <span
-                key={index}
-                className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs"
-              >
-                {actor}
-              </span>
-            ))}
-            {show.cast.length > 3 && (
-              <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
-                +{show.cast.length - 3} more
-              </span>
-            )}
+            <span className="font-medium mr-2">Available Tickets:</span> {show.total_tickets - show.booked_tickets} of {show.total_tickets}
           </div>
         </div>
         
@@ -105,11 +82,11 @@ const ShowCard: React.FC<ShowCardProps> = ({ show, onBookShow }) => {
                   <p className="text-sm text-gray-600">{formatTime(showTime.time)}</p>
                 </div>
                 <div className="text-right">
-                  <p className={`text-sm font-medium ${getAvailabilityColor(showTime.availableSeats, showTime.totalSeats)}`}>
-                    {showTime.availableSeats} seats left
+                  <p className={`text-sm font-medium ${getAvailabilityColor(showTime.availableSeats || (show.total_tickets - show.booked_tickets), showTime.totalSeats || show.total_tickets)}`}>
+                    {showTime.availableSeats || (show.total_tickets - show.booked_tickets)} seats left
                   </p>
                   <p className="text-xs text-gray-500">
-                    of {showTime.totalSeats} total
+                    of {showTime.totalSeats || show.total_tickets} total
                   </p>
                 </div>
               </div>

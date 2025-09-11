@@ -15,24 +15,24 @@ export default async function handler(
         // Try to search from backend
         const shows = await apiService.searchShows({
           location: location as string,
-          title: title as string,
-          limit: parseInt(limit as string),
-          offset: parseInt(offset as string)
+          search: title as string,
+          page_size: parseInt(limit as string),
+          page: Math.floor(parseInt(offset as string) / parseInt(limit as string)) + 1
         });
-        res.status(200).json(shows);
+        res.status(200).json(shows.data || []);
       } else {
         // Fallback to filtering mock data
         let filteredShows = mockShows;
         
         if (location) {
           filteredShows = filteredShows.filter(show => 
-            show.venue.toLowerCase().includes((location as string).toLowerCase())
+            show.location.toLowerCase().includes((location as string).toLowerCase())
           );
         }
         
         if (title) {
           filteredShows = filteredShows.filter(show => 
-            show.title.toLowerCase().includes((title as string).toLowerCase())
+            (show.title || show.name).toLowerCase().includes((title as string).toLowerCase())
           );
         }
         
@@ -55,7 +55,7 @@ export default async function handler(
       
       if (location) {
         filteredShows = filteredShows.filter(show => 
-          show.venue.toLowerCase().includes((location as string).toLowerCase())
+          show.location.toLowerCase().includes((location as string).toLowerCase())
         );
       }
       

@@ -1,16 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { mockBookings, mockShows, generateId } from '../../lib/mockData';
-import { Booking } from '../../types/show';
+import { Booking, BookingRequest } from '../../types/show';
 import QRCode from 'qrcode';
-
-interface BookingRequest {
-  showId: string;
-  showTimeId: string;
-  customerName: string;
-  customerEmail: string;
-  customerPhone: string;
-  numberOfTickets: number;
-}
 
 export default async function handler(
   req: NextApiRequest,
@@ -21,55 +12,58 @@ export default async function handler(
       const bookingData: BookingRequest = req.body;
       
       // Find the show and show time
-      const show = mockShows.find(s => s.id === bookingData.showId);
+      const show = mockShows.find(s => s.id === bookingData.show_id);
       if (!show) {
         return res.status(404).json({ error: 'Show not found' });
       }
 
-      const showTime = show.showTimes.find(st => st.id === bookingData.showTimeId);
+      // For now, use the first show time since the BookingRequest doesn't have showTimeId
+      const showTime = show.showTimes[0];
       if (!showTime) {
         return res.status(404).json({ error: 'Show time not found' });
       }
 
       // Check availability
-      if (showTime.availableSeats < bookingData.numberOfTickets) {
+      const availableSeats = showTime.availableSeats || (show.total_tickets - show.booked_tickets);
+      if (availableSeats < bookingData.number_of_tickets) {
         return res.status(400).json({ error: 'Not enough available seats' });
       }
 
       // Generate booking
       const bookingId = generateId();
-      const totalPrice = show.ticketPrice * bookingData.numberOfTickets;
+      const totalPrice = (show.price / 100) * bookingData.number_of_tickets;
       
       // Generate QR code data
       const qrData = JSON.stringify({
         bookingId,
-        showTitle: show.title,
+        showTitle: show.title || show.name,
         showDate: showTime.date,
         showTime: showTime.time,
-        venue: show.venue,
-        numberOfTickets: bookingData.numberOfTickets,
-        customerName: bookingData.customerName
+        venue: show.location,
+        numberOfTickets: bookingData.number_of_tickets,
+        customerName: bookingData.customer_name
       });
 
       const qrCode = await QRCode.toDataURL(qrData);
 
       const newBooking: Booking = {
-        id: bookingId,
-        showId: bookingData.showId,
-        showTimeId: bookingData.showTimeId,
-        userId: generateId(), // In real app, this would come from auth
-        customerName: bookingData.customerName,
-        customerEmail: bookingData.customerEmail,
-        customerPhone: bookingData.customerPhone,
-        numberOfTickets: bookingData.numberOfTickets,
-        totalPrice,
-        bookingDate: new Date().toISOString(),
+        booking_id: bookingId,
+        show_id: bookingData.show_id,
+        contact_type: bookingData.contact_type,
+        contact_value: bookingData.contact_value,
+        number_of_tickets: bookingData.number_of_tickets,
+        customer_name: bookingData.customer_name,
+        total_amount: Math.round(totalPrice * 100), // Convert to cents
+        booking_date: new Date().toISOString(),
         status: 'confirmed',
-        qrCode
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
       // Update available seats (in real app, this would be in database)
-      showTime.availableSeats -= bookingData.numberOfTickets;
+      if (showTime.availableSeats !== undefined) {
+        showTime.availableSeats -= bookingData.number_of_tickets;
+      }
       
       // Add to mock bookings
       mockBookings.push(newBooking);

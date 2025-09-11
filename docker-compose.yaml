@@ -45,7 +45,7 @@ services:
       - theater-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/v1/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "-O", "/dev/null", "http://localhost:8080/api/v1/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -86,26 +86,62 @@ services:
       MYSQL_PASSWORD: theater_password
       MYSQL_CHARSET: utf8mb4
       MYSQL_COLLATION: utf8mb4_unicode_ci
+      # Additional MySQL configuration for data persistence
+      MYSQL_INITDB_SKIP_TZINFO: 1
     volumes:
+      # Persistent data storage
       - mysql_data:/var/lib/mysql
+      # Configuration files
       - ./theater/scripts/init-db.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
       - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+      # Backup directory (mounted for backup scripts)
+      - mysql_backups:/backups
+      # Logs directory
+      - mysql_logs:/var/log/mysql
     networks:
       - theater-network
     restart: unless-stopped
+    # Enhanced health check
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "theater_user", "-ptheater_password"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s    
+      start_period: 30s
+    # Resource limits for production
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M    
 
 # Named volumes for data persistence
 volumes:
   mysql_data:    
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/mysql
+  mysql_backups:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/backups
+  mysql_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/logs
   redis_data:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/redis
 
 # Custom network
 networks:

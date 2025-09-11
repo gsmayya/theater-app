@@ -235,7 +235,7 @@ const BookingPage: React.FC = () => {
                   <p><span className="font-medium">Show Time:</span> {shows.find(s => s.id === selectedShow)?.showTimes.find(st => st.id === selectedShowTime)?.date || '-'} {shows.find(s => s.id === selectedShow)?.showTimes.find(st => st.id === selectedShowTime)?.time || ''}</p>
                   <p><span className="font-medium">Tickets:</span> {tickets}</p>
                   <p><span className="font-medium">Total Price:</span> ${
-                    (shows.find(s => s.id === selectedShow)?.ticketPrice || 0) * tickets
+                    ((shows.find(s => s.id === selectedShow)?.price || 0) / 100) * tickets
                   }</p>
                 </div>
               </div>

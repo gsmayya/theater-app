@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
@@ -26,19 +25,13 @@ func CreateBookingHandler(w http.ResponseWriter, r *http.Request) {
 		InitializeBookingService()
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	// Handle preflight requests
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+	// Handle CORS preflight requests
+	if HandleCORS(w, r) {
 		return
 	}
 
-	if r.Method != "POST" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	// Validate HTTP method
+	if !ValidateMethod(w, r, "POST") {
 		return
 	}
 
@@ -57,12 +50,7 @@ func CreateBookingHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Printf("Error parsing booking request: %v", err)
-		response := &bookings.BookingResponse{
-			Success: false,
-			Error:   err.Error(),
-		}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		WriteErrorResponse(w, http.StatusBadRequest, "Invalid booking request", err)
 		return
 	}
 
@@ -77,37 +65,30 @@ func CreateBookingHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Printf("Error creating booking: %v", err)
-		response := &bookings.BookingResponse{
-			Success: false,
-			Error:   err.Error(),
+		
+		// Determine appropriate HTTP status code based on error type
+		var statusCode int
+		switch {
+		case strings.Contains(err.Error(), "not found"):
+			statusCode = http.StatusNotFound
+		case strings.Contains(err.Error(), "insufficient tickets"):
+			statusCode = http.StatusConflict
+		default:
+			statusCode = http.StatusInternalServerError
 		}
 		
-		// Determine appropriate HTTP status code
-		if strings.Contains(err.Error(), "not found") {
-			w.WriteHeader(http.StatusNotFound)
-		} else if strings.Contains(err.Error(), "insufficient tickets") {
-			w.WriteHeader(http.StatusConflict)
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-		
-		json.NewEncoder(w).Encode(response)
+		WriteErrorResponse(w, statusCode, "Failed to create booking", err)
 		return
 	}
 
 	// Success response
-	response := &bookings.BookingResponse{
-		Success: true,
-		Booking: createdBooking,
-		Message: "Booking created successfully",
-		Data: map[string]interface{}{
-			"booking_id": createdBooking.BookingID,
-			"show_id":    createdBooking.ShowID.String(),
-		},
+	responseData := map[string]interface{}{
+		"booking_id": createdBooking.BookingID,
+		"show_id":    createdBooking.ShowID.String(),
+		"booking":    createdBooking,
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(response)
+	WriteSuccessResponse(w, http.StatusCreated, "Booking created successfully", responseData)
 }
 
 // GetBookingHandler retrieves a specific booking by ID
@@ -116,51 +97,32 @@ func GetBookingHandler(w http.ResponseWriter, r *http.Request) {
 		InitializeBookingService()
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	// Validate HTTP method
+	if !ValidateMethod(w, r, "GET") {
 		return
 	}
 
 	bookingID := r.URL.Query().Get("booking_id")
 	if bookingID == "" {
-		response := &bookings.BookingResponse{
-			Success: false,
-			Error:   "booking_id parameter is required",
-		}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		WriteErrorResponse(w, http.StatusBadRequest, "Missing required parameter", 
+			&HTTPError{Code: http.StatusBadRequest, Message: "booking_id parameter is required"})
 		return
 	}
 
 	booking, err := bookingService.GetBooking(bookingID)
 	if err != nil {
 		log.Printf("Error getting booking: %v", err)
-		response := &bookings.BookingResponse{
-			Success: false,
-			Error:   err.Error(),
-		}
 		
+		statusCode := http.StatusInternalServerError
 		if strings.Contains(err.Error(), "not found") {
-			w.WriteHeader(http.StatusNotFound)
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
+			statusCode = http.StatusNotFound
 		}
 		
-		json.NewEncoder(w).Encode(response)
+		WriteErrorResponse(w, statusCode, "Failed to retrieve booking", err)
 		return
 	}
 
-	response := &bookings.BookingResponse{
-		Success: true,
-		Booking: booking,
-		Message: "Booking retrieved successfully",
-	}
-
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	WriteSuccessResponse(w, http.StatusOK, "Booking retrieved successfully", booking)
 }
 
 // UpdateBookingStatusHandler updates a booking's status
@@ -169,18 +131,13 @@ func UpdateBookingStatusHandler(w http.ResponseWriter, r *http.Request) {
 		InitializeBookingService()
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "PUT, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+	// Handle CORS preflight requests
+	if HandleCORS(w, r) {
 		return
 	}
 
-	if r.Method != "PUT" && r.Method != "POST" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	// Validate HTTP method
+	if !ValidateMethod(w, r, "PUT", "POST") {
 		return
 	}
 
@@ -188,46 +145,32 @@ func UpdateBookingStatusHandler(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status")
 
 	if bookingID == "" || status == "" {
-		response := &bookings.BookingResponse{
-			Success: false,
-			Error:   "booking_id and status parameters are required",
-		}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		WriteErrorResponse(w, http.StatusBadRequest, "Missing required parameters", 
+			&HTTPError{Code: http.StatusBadRequest, Message: "booking_id and status parameters are required"})
 		return
 	}
 
 	err := bookingService.UpdateBookingStatus(bookingID, status)
 	if err != nil {
 		log.Printf("Error updating booking status: %v", err)
-		response := &bookings.BookingResponse{
-			Success: false,
-			Error:   err.Error(),
-		}
 		
+		statusCode := http.StatusInternalServerError
 		if strings.Contains(err.Error(), "not found") {
-			w.WriteHeader(http.StatusNotFound)
+			statusCode = http.StatusNotFound
 		} else if strings.Contains(err.Error(), "invalid status") {
-			w.WriteHeader(http.StatusBadRequest)
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
+			statusCode = http.StatusBadRequest
 		}
 		
-		json.NewEncoder(w).Encode(response)
+		WriteErrorResponse(w, statusCode, "Failed to update booking status", err)
 		return
 	}
 
-	response := &bookings.BookingResponse{
-		Success: true,
-		Message: "Booking status updated successfully",
-		Data: map[string]interface{}{
-			"booking_id": bookingID,
-			"status":     status,
-		},
+	responseData := map[string]interface{}{
+		"booking_id": bookingID,
+		"status":     status,
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	WriteSuccessResponse(w, http.StatusOK, "Booking status updated successfully", responseData)
 }
 
 // GetBookingsByShowHandler retrieves all bookings for a specific show
@@ -236,55 +179,38 @@ func GetBookingsByShowHandler(w http.ResponseWriter, r *http.Request) {
 		InitializeBookingService()
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	// Validate HTTP method
+	if !ValidateMethod(w, r, "GET") {
 		return
 	}
 
 	showIDStr := r.URL.Query().Get("show_id")
 	if showIDStr == "" {
-		response := &bookings.BookingResponse{
-			Success: false,
-			Error:   "show_id parameter is required",
-		}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		WriteErrorResponse(w, http.StatusBadRequest, "Missing required parameter", 
+			&HTTPError{Code: http.StatusBadRequest, Message: "show_id parameter is required"})
 		return
 	}
 
 	showID, err := uuid.Parse(showIDStr)
 	if err != nil {
-		response := &bookings.BookingResponse{
-			Success: false,
-			Error:   "invalid show_id format",
-		}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		WriteErrorResponse(w, http.StatusBadRequest, "Invalid show ID format", err)
 		return
 	}
 
 	bookingsList, err := bookingService.GetBookingsByShow(showID)
 	if err != nil {
 		log.Printf("Error getting bookings by show: %v", err)
-		response := &bookings.BookingResponse{
-			Success: false,
-			Error:   err.Error(),
-		}
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		WriteErrorResponse(w, http.StatusInternalServerError, "Failed to retrieve bookings", err)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success":  true,
+	responseData := map[string]interface{}{
 		"bookings": bookingsList,
 		"count":    len(bookingsList),
 		"show_id":  showIDStr,
-	})
+	}
+
+	WriteSuccessResponse(w, http.StatusOK, "Bookings retrieved successfully", responseData)
 }
 
 // GetBookingsByContactHandler retrieves bookings by contact information
@@ -293,11 +219,8 @@ func GetBookingsByContactHandler(w http.ResponseWriter, r *http.Request) {
 		InitializeBookingService()
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	// Validate HTTP method
+	if !ValidateMethod(w, r, "GET") {
 		return
 	}
 
@@ -305,35 +228,26 @@ func GetBookingsByContactHandler(w http.ResponseWriter, r *http.Request) {
 	contactValue := r.URL.Query().Get("contact_value")
 
 	if contactType == "" || contactValue == "" {
-		response := &bookings.BookingResponse{
-			Success: false,
-			Error:   "contact_type and contact_value parameters are required",
-		}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		WriteErrorResponse(w, http.StatusBadRequest, "Missing required parameters", 
+			&HTTPError{Code: http.StatusBadRequest, Message: "contact_type and contact_value parameters are required"})
 		return
 	}
 
 	bookingsList, err := bookingService.GetBookingsByContact(contactType, contactValue)
 	if err != nil {
 		log.Printf("Error getting bookings by contact: %v", err)
-		response := &bookings.BookingResponse{
-			Success: false,
-			Error:   err.Error(),
-		}
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		WriteErrorResponse(w, http.StatusInternalServerError, "Failed to retrieve bookings", err)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success":       true,
+	responseData := map[string]interface{}{
 		"bookings":      bookingsList,
 		"count":         len(bookingsList),
 		"contact_type":  contactType,
 		"contact_value": contactValue,
-	})
+	}
+
+	WriteSuccessResponse(w, http.StatusOK, "Bookings retrieved successfully", responseData)
 }
 
 // SearchBookingsHandler handles booking search with filters
@@ -342,18 +256,13 @@ func SearchBookingsHandler(w http.ResponseWriter, r *http.Request) {
 		InitializeBookingService()
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+	// Handle CORS preflight requests
+	if HandleCORS(w, r) {
 		return
 	}
 
-	if r.Method != "GET" && r.Method != "POST" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	// Validate HTTP method
+	if !ValidateMethod(w, r, "GET", "POST") {
 		return
 	}
 
@@ -399,23 +308,33 @@ func SearchBookingsHandler(w http.ResponseWriter, r *http.Request) {
 	bookingsList, totalCount, err := bookingService.SearchBookings(filter)
 	if err != nil {
 		log.Printf("Error searching bookings: %v", err)
-		response := &bookings.BookingResponse{
-			Success: false,
-			Error:   err.Error(),
-		}
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		WriteErrorResponse(w, http.StatusInternalServerError, "Failed to search bookings", err)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success":     true,
-		"bookings":    bookingsList,
-		"total_count": totalCount,
-		"count":       len(bookingsList),
-		"filter":      filter,
-	})
+	// Calculate pagination info
+	page := 1
+	pageSize := 20
+	if filter.Limit > 0 {
+		pageSize = filter.Limit
+	}
+	if filter.Offset > 0 {
+		page = (filter.Offset / pageSize) + 1
+	}
+
+	pagination := PaginationInfo{
+		Page:       page,
+		PageSize:   pageSize,
+		Total:      totalCount,
+		TotalPages: (totalCount + pageSize - 1) / pageSize,
+	}
+
+	responseData := map[string]interface{}{
+		"bookings": bookingsList,
+		"filter":   filter,
+	}
+
+	WritePaginatedResponse(w, http.StatusOK, "Bookings retrieved successfully", responseData, pagination)
 }
 
 // GetBookingStatsHandler retrieves booking statistics
@@ -424,31 +343,19 @@ func GetBookingStatsHandler(w http.ResponseWriter, r *http.Request) {
 		InitializeBookingService()
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	// Validate HTTP method
+	if !ValidateMethod(w, r, "GET") {
 		return
 	}
 
 	stats, err := bookingService.GetBookingStats()
 	if err != nil {
 		log.Printf("Error getting booking stats: %v", err)
-		response := &bookings.BookingResponse{
-			Success: false,
-			Error:   err.Error(),
-		}
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		WriteErrorResponse(w, http.StatusInternalServerError, "Failed to retrieve booking statistics", err)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success": true,
-		"stats":   stats,
-	})
+	WriteSuccessResponse(w, http.StatusOK, "Booking statistics retrieved successfully", stats)
 }
 
 // GetShowBookingSummaryHandler gets booking summary for a specific show
@@ -457,59 +364,38 @@ func GetShowBookingSummaryHandler(w http.ResponseWriter, r *http.Request) {
 		InitializeBookingService()
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	// Validate HTTP method
+	if !ValidateMethod(w, r, "GET") {
 		return
 	}
 
 	showIDStr := r.URL.Query().Get("show_id")
 	if showIDStr == "" {
-		response := &bookings.BookingResponse{
-			Success: false,
-			Error:   "show_id parameter is required",
-		}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		WriteErrorResponse(w, http.StatusBadRequest, "Missing required parameter", 
+			&HTTPError{Code: http.StatusBadRequest, Message: "show_id parameter is required"})
 		return
 	}
 
 	showID, err := uuid.Parse(showIDStr)
 	if err != nil {
-		response := &bookings.BookingResponse{
-			Success: false,
-			Error:   "invalid show_id format",
-		}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		WriteErrorResponse(w, http.StatusBadRequest, "Invalid show ID format", err)
 		return
 	}
 
 	summary, err := bookingService.GetShowBookingSummary(showID)
 	if err != nil {
 		log.Printf("Error getting show booking summary: %v", err)
-		response := &bookings.BookingResponse{
-			Success: false,
-			Error:   err.Error(),
-		}
 		
+		statusCode := http.StatusInternalServerError
 		if strings.Contains(err.Error(), "not found") {
-			w.WriteHeader(http.StatusNotFound)
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
+			statusCode = http.StatusNotFound
 		}
 		
-		json.NewEncoder(w).Encode(response)
+		WriteErrorResponse(w, statusCode, "Failed to retrieve booking summary", err)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success": true,
-		"summary": summary,
-	})
+	WriteSuccessResponse(w, http.StatusOK, "Booking summary retrieved successfully", summary)
 }
 
 // ConfirmBookingHandler confirms a pending booking
@@ -518,61 +404,42 @@ func ConfirmBookingHandler(w http.ResponseWriter, r *http.Request) {
 		InitializeBookingService()
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "PUT, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+	// Handle CORS preflight requests
+	if HandleCORS(w, r) {
 		return
 	}
 
-	if r.Method != "PUT" && r.Method != "POST" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	// Validate HTTP method
+	if !ValidateMethod(w, r, "PUT", "POST") {
 		return
 	}
 
 	bookingID := r.URL.Query().Get("booking_id")
 	if bookingID == "" {
-		response := &bookings.BookingResponse{
-			Success: false,
-			Error:   "booking_id parameter is required",
-		}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		WriteErrorResponse(w, http.StatusBadRequest, "Missing required parameter", 
+			&HTTPError{Code: http.StatusBadRequest, Message: "booking_id parameter is required"})
 		return
 	}
 
 	err := bookingService.ConfirmBooking(bookingID)
 	if err != nil {
 		log.Printf("Error confirming booking: %v", err)
-		response := &bookings.BookingResponse{
-			Success: false,
-			Error:   err.Error(),
-		}
 		
+		statusCode := http.StatusInternalServerError
 		if strings.Contains(err.Error(), "not found") {
-			w.WriteHeader(http.StatusNotFound)
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
+			statusCode = http.StatusNotFound
 		}
 		
-		json.NewEncoder(w).Encode(response)
+		WriteErrorResponse(w, statusCode, "Failed to confirm booking", err)
 		return
 	}
 
-	response := &bookings.BookingResponse{
-		Success: true,
-		Message: "Booking confirmed successfully",
-		Data: map[string]interface{}{
-			"booking_id": bookingID,
-			"status":     "confirmed",
-		},
+	responseData := map[string]interface{}{
+		"booking_id": bookingID,
+		"status":     "confirmed",
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	WriteSuccessResponse(w, http.StatusOK, "Booking confirmed successfully", responseData)
 }
 
 // CancelBookingHandler cancels a booking
@@ -581,59 +448,40 @@ func CancelBookingHandler(w http.ResponseWriter, r *http.Request) {
 		InitializeBookingService()
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "PUT, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+	// Handle CORS preflight requests
+	if HandleCORS(w, r) {
 		return
 	}
 
-	if r.Method != "PUT" && r.Method != "POST" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	// Validate HTTP method
+	if !ValidateMethod(w, r, "PUT", "POST") {
 		return
 	}
 
 	bookingID := r.URL.Query().Get("booking_id")
 	if bookingID == "" {
-		response := &bookings.BookingResponse{
-			Success: false,
-			Error:   "booking_id parameter is required",
-		}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		WriteErrorResponse(w, http.StatusBadRequest, "Missing required parameter", 
+			&HTTPError{Code: http.StatusBadRequest, Message: "booking_id parameter is required"})
 		return
 	}
 
 	err := bookingService.CancelBooking(bookingID)
 	if err != nil {
 		log.Printf("Error cancelling booking: %v", err)
-		response := &bookings.BookingResponse{
-			Success: false,
-			Error:   err.Error(),
-		}
 		
+		statusCode := http.StatusInternalServerError
 		if strings.Contains(err.Error(), "not found") {
-			w.WriteHeader(http.StatusNotFound)
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
+			statusCode = http.StatusNotFound
 		}
 		
-		json.NewEncoder(w).Encode(response)
+		WriteErrorResponse(w, statusCode, "Failed to cancel booking", err)
 		return
 	}
 
-	response := &bookings.BookingResponse{
-		Success: true,
-		Message: "Booking cancelled successfully",
-		Data: map[string]interface{}{
-			"booking_id": bookingID,
-			"status":     "cancelled",
-		},
+	responseData := map[string]interface{}{
+		"booking_id": bookingID,
+		"status":     "cancelled",
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	WriteSuccessResponse(w, http.StatusOK, "Booking cancelled successfully", responseData)
 }

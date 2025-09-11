@@ -11,9 +11,7 @@ import (
 
 // for any new just returns ok with a message.
 func DefaultHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintln(w, `{"status": "Ticket Backend Service is running"}`)
+	WriteSuccessResponse(w, http.StatusOK, "Ticket Backend Service is running", nil)
 }
 
 func ShowListHandler(w http.ResponseWriter, r *http.Request) {

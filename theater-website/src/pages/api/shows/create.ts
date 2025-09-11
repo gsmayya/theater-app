@@ -1,7 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { mockShows, generateId } from '../../../lib/mockData';
-import { apiService, CreateShowRequest } from '../../../lib/apiService';
+import { apiService } from '../../../lib/apiService';
 import { Show } from '../../../types/show';
+
+interface CreateShowRequest {
+  title: string;
+  description: string;
+  location: string;
+  date: string;
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -18,50 +25,41 @@ export default async function handler(
         });
       }
 
-      if (apiService.isBackendConfigured) {
-        // Try to create show via backend
-        const newShow = await apiService.createShow({
-          title,
-          description,
-          location,
-          date
-        });
-        res.status(201).json(newShow);
-      } else {
-        // Fallback to mock data creation
+      // Create show using mock data (backend integration can be added later)
         const newShow: Show = {
           id: generateId(),
+          name: title,
           title,
-          description,
-          imageUrl: '/images/default-show.jpg',
-          duration: 120, // Default duration
-          genre: 'Drama', // Default genre
-          director: 'Unknown Director',
-          cast: ['TBD'],
+          details: description,
+          price: 5000, // $50.00 in cents
+          total_tickets: 100,
+          booked_tickets: 0,
+          location,
+          show_number: `SH${Date.now()}`,
+          show_date: date,
           showTimes: [
             {
               id: generateId(),
-              showId: generateId(),
+              show_id: generateId(),
               date: date,
               time: '19:00', // Default time
               availableSeats: 100,
               totalSeats: 100
             }
           ],
-          ticketPrice: 50, // Default price
-          availableTickets: 100,
-          venue: location,
-          rating: 'PG'
+          images: ['/images/default-show.jpg'],
+          videos: [],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         };
 
-        // Add to mock data array (in a real app, this would be persisted)
-        mockShows.push(newShow);
+      // Add to mock data array (in a real app, this would be persisted)
+      mockShows.push(newShow);
 
-        // Simulate API delay
-        setTimeout(() => {
-          res.status(201).json(newShow);
-        }, 300);
-      }
+      // Simulate API delay
+      setTimeout(() => {
+        res.status(201).json(newShow);
+      }, 300);
     } catch (error) {
       console.error('Create show API failed:', error);
       

@@ -120,21 +120,17 @@ const AdminDashboard: React.FC = () => {
                           {show.title}
                         </h4>
                         <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                          {show.description}
+                          {show.details}
                         </p>
                         <div className="flex items-center text-xs text-gray-500 space-x-4">
-                          <span>📍 {show.venue}</span>
-                          <span>💰 ${show.ticketPrice}</span>
-                          <span>🎫 {show.availableTickets} available</span>
+                          <span>📍 {show.location}</span>
+                          <span>💰 ${(show.price / 100).toFixed(2)}</span>
+                          <span>🎫 {show.total_tickets - show.booked_tickets} available</span>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2 ml-4">
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          show.genre === 'Musical' ? 'bg-purple-100 text-purple-800' :
-                          show.genre === 'Drama' ? 'bg-blue-100 text-blue-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {show.genre}
+                        <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
+                          Theater Show
                         </span>
                       </div>
                     </div>
@@ -155,14 +151,14 @@ const AdminDashboard: React.FC = () => {
           <div className="bg-gradient-to-r from-theater-secondary to-theater-accent text-white rounded-lg p-6">
             <h4 className="text-lg font-semibold mb-2">Available Tickets</h4>
             <p className="text-3xl font-bold">
-              {shows.reduce((sum, show) => sum + show.availableTickets, 0)}
+              {shows.reduce((sum, show) => sum + (show.total_tickets - show.booked_tickets), 0)}
             </p>
           </div>
           
           <div className="bg-gradient-to-r from-theater-accent to-orange-400 text-white rounded-lg p-6">
             <h4 className="text-lg font-semibold mb-2">Average Price</h4>
             <p className="text-3xl font-bold">
-              ${shows.length > 0 ? Math.round(shows.reduce((sum, show) => sum + show.ticketPrice, 0) / shows.length) : 0}
+              ${shows.length > 0 ? Math.round(shows.reduce((sum, show) => sum + (show.price / 100), 0) / shows.length) : 0}
             </p>
           </div>
         </div>

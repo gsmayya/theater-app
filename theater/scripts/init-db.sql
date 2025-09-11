@@ -1,5 +1,6 @@
 -- Theater Booking System Database Schema
 -- This script creates the necessary tables for the theater management system
+-- Optimized for MySQL 8.0
 
 -- Create database if it doesn't exist
 CREATE DATABASE IF NOT EXISTS theater_booking 
@@ -8,15 +9,18 @@ COLLATE utf8mb4_unicode_ci;
 
 USE theater_booking;
 
+-- Set MySQL 8.0 specific SQL modes for better compatibility
+SET sql_mode = 'STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO';
+
 -- Shows table with updated structure
 CREATE TABLE IF NOT EXISTS shows (
     id VARCHAR(36) PRIMARY KEY,                    -- UUID as string
-    show_name VARCHAR(255) NOT NULL,                    -- Show name/title
+    name VARCHAR(255) NOT NULL,                    -- Show name/title
     details TEXT,                                  -- Show description
     price INT NOT NULL,                            -- Ticket price in cents or smallest currency unit
     total_tickets INT NOT NULL,                    -- Total available tickets
     booked_tickets INT DEFAULT 0,                  -- Currently booked tickets
-    show_location VARCHAR(255) NOT NULL,                -- Show location
+    location VARCHAR(255) NOT NULL,                -- Show location
     show_number VARCHAR(50) NOT NULL UNIQUE,       -- Unique show number (e.g., SH-123456)
     show_date DATETIME NOT NULL,                   -- Date and time of the show
     images JSON,                                   -- Array of CMS image IDs
@@ -24,16 +28,24 @@ CREATE TABLE IF NOT EXISTS shows (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
-    -- Indexes for performance
-    INDEX idx_shows_show_location (show_location),
-    INDEX idx_shows_price (price),
-    INDEX idx_shows_date (show_date),
-    INDEX idx_shows_availability ((total_tickets - booked_tickets)),
-    INDEX idx_shows_show_number (show_number),
+    -- Indexes for performance (MySQL 8.0 optimized)
+    INDEX idx_location (location),
+    INDEX idx_price (price),
+    INDEX idx_show_date (show_date),
+    INDEX idx_availability ((total_tickets - booked_tickets)),
+    INDEX idx_name (name),
+    INDEX idx_show_number (show_number),
     
-    -- Full-text search index for show names and details
-    FULLTEXT(show_name, details)
-) ENGINE=InnoDB;
+    -- Composite indexes for common query patterns
+    INDEX idx_location_price (location, price),
+    INDEX idx_location_date (location, show_date),
+    INDEX idx_price_date (price, show_date),
+    
+    -- Full-text search index for show names and details (MySQL 8.0 optimized)
+    FULLTEXT(name, details) WITH PARSER ngram
+) ENGINE=InnoDB 
+  ROW_FORMAT=DYNAMIC 
+  COMPRESSION='ZLIB';
 
 -- Bookings table
 CREATE TABLE IF NOT EXISTS bookings (
@@ -52,7 +64,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     -- Foreign key constraint
     FOREIGN KEY (show_id) REFERENCES shows(id) ON DELETE CASCADE,
     
-    -- Indexes for performance
+    -- Indexes for performance (MySQL 8.0 optimized)
     INDEX idx_bookings_show_id (show_id),
     INDEX idx_bookings_contact (contact_type, contact_value),
     INDEX idx_bookings_status (status),
@@ -61,10 +73,14 @@ CREATE TABLE IF NOT EXISTS bookings (
     
     -- Composite indexes for common queries
     INDEX idx_bookings_show_status (show_id, status),
-    INDEX idx_bookings_contact_status (contact_type, contact_value, status)
-) ENGINE=InnoDB;
+    INDEX idx_bookings_contact_status (contact_type, contact_value, status),
+    INDEX idx_bookings_date_status (booking_date, status),
+    INDEX idx_bookings_show_date (show_id, booking_date)
+) ENGINE=InnoDB 
+  ROW_FORMAT=DYNAMIC 
+  COMPRESSION='ZLIB';
 
--- Show availability index table for optimized queries
+-- Show availability index table for optimized queries (MySQL 8.0 optimized)
 CREATE TABLE IF NOT EXISTS show_availability_index (
     show_id VARCHAR(36) PRIMARY KEY,
     is_available BOOLEAN NOT NULL,
@@ -73,13 +89,21 @@ CREATE TABLE IF NOT EXISTS show_availability_index (
     
     FOREIGN KEY (show_id) REFERENCES shows(id) ON DELETE CASCADE,
     INDEX idx_availability (is_available),
-    INDEX idx_available_tickets (available_tickets)
-) ENGINE=InnoDB;
+    INDEX idx_available_tickets (available_tickets),
+    INDEX idx_availability_tickets (is_available, available_tickets)
+) ENGINE=InnoDB 
+  ROW_FORMAT=DYNAMIC 
+  COMPRESSION='ZLIB';
 
 -- Triggers to maintain show availability index
 DELIMITER //
 
-CREATE TRIGGER IF NOT EXISTS update_show_availability_on_insert
+-- Drop existing triggers if they exist (MySQL 8.0 compatible)
+DROP TRIGGER IF EXISTS update_show_availability_on_insert//
+DROP TRIGGER IF EXISTS update_show_availability_on_update//
+DROP TRIGGER IF EXISTS cleanup_show_availability_on_delete//
+
+CREATE TRIGGER update_show_availability_on_insert
     AFTER INSERT ON shows
     FOR EACH ROW
 BEGIN
@@ -90,7 +114,7 @@ BEGIN
         available_tickets = (NEW.total_tickets - NEW.booked_tickets);
 END//
 
-CREATE TRIGGER IF NOT EXISTS update_show_availability_on_update
+CREATE TRIGGER update_show_availability_on_update
     AFTER UPDATE ON shows
     FOR EACH ROW
 BEGIN
@@ -101,7 +125,7 @@ BEGIN
     WHERE show_id = NEW.id;
 END//
 
-CREATE TRIGGER IF NOT EXISTS cleanup_show_availability_on_delete
+CREATE TRIGGER cleanup_show_availability_on_delete
     AFTER DELETE ON shows
     FOR EACH ROW
 BEGIN
@@ -113,12 +137,12 @@ DELIMITER ;
 -- Insert sample data for testing (optional)
 INSERT IGNORE INTO shows (
     id, 
-    show_name, 
+    name, 
     details, 
     price, 
     total_tickets, 
     booked_tickets, 
-    show_location, 
+    location, 
     show_number, 
     show_date,
     images,
@@ -215,10 +239,10 @@ DROP VIEW IF EXISTS show_booking_summary;
 CREATE VIEW show_booking_summary AS
 SELECT 
     s.id as show_id,
-    s.show_name,
+    s.name,
     s.show_number,
     s.show_date,
-    s.show_location,
+    s.location,
     s.price,
     s.total_tickets,
     s.booked_tickets,
@@ -231,14 +255,14 @@ SELECT
     COUNT(CASE WHEN b.status = 'cancelled' THEN 1 END) as cancelled_bookings
 FROM shows s
 LEFT JOIN bookings b ON s.id = b.show_id
-GROUP BY s.id, s.show_name, s.show_number, s.show_date, s.show_location, s.price, s.total_tickets, s.booked_tickets;
+GROUP BY s.id, s.name, s.show_number, s.show_date, s.location, s.price, s.total_tickets, s.booked_tickets;
 
 DROP VIEW IF EXISTS recent_bookings;
 CREATE VIEW recent_bookings AS
 SELECT 
     b.booking_id,
     b.show_id,
-    s.show_name,
+    s.name,
     s.show_number,
     s.show_date,
     b.contact_type,
@@ -254,6 +278,82 @@ JOIN shows s ON b.show_id = s.id
 ORDER BY b.created_at DESC
 LIMIT 50;
 
+-- MySQL 8.0 specific optimizations and procedures
+
+-- Create a procedure to refresh show availability index (useful for maintenance)
+DELIMITER //
+CREATE PROCEDURE RefreshShowAvailabilityIndex()
+BEGIN
+    DECLARE done INT DEFAULT FALSE;
+    DECLARE show_id_var VARCHAR(36);
+    DECLARE total_tickets_var INT;
+    DECLARE booked_tickets_var INT;
+    
+    DECLARE show_cursor CURSOR FOR 
+        SELECT id, total_tickets, booked_tickets FROM shows;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+    
+    OPEN show_cursor;
+    
+    read_loop: LOOP
+        FETCH show_cursor INTO show_id_var, total_tickets_var, booked_tickets_var;
+        IF done THEN
+            LEAVE read_loop;
+        END IF;
+        
+        INSERT INTO show_availability_index (show_id, is_available, available_tickets)
+        VALUES (show_id_var, (total_tickets_var > booked_tickets_var), (total_tickets_var - booked_tickets_var))
+        ON DUPLICATE KEY UPDATE
+            is_available = (total_tickets_var > booked_tickets_var),
+            available_tickets = (total_tickets_var - booked_tickets_var);
+    END LOOP;
+    
+    CLOSE show_cursor;
+END//
+DELIMITER ;
+
+-- Create a function to get available tickets for a show (MySQL 8.0 optimized)
+DELIMITER //
+CREATE FUNCTION GetAvailableTickets(show_id_param VARCHAR(36))
+RETURNS INT
+READS SQL DATA
+DETERMINISTIC
+BEGIN
+    DECLARE available_count INT DEFAULT 0;
+    
+    SELECT (total_tickets - booked_tickets) INTO available_count
+    FROM shows 
+    WHERE id = show_id_param;
+    
+    RETURN COALESCE(available_count, 0);
+END//
+DELIMITER ;
+
+-- Create a function to check if a show is available (MySQL 8.0 optimized)
+DELIMITER //
+CREATE FUNCTION IsShowAvailable(show_id_param VARCHAR(36))
+RETURNS BOOLEAN
+READS SQL DATA
+DETERMINISTIC
+BEGIN
+    DECLARE is_available BOOLEAN DEFAULT FALSE;
+    
+    SELECT (total_tickets > booked_tickets) INTO is_available
+    FROM shows 
+    WHERE id = show_id_param;
+    
+    RETURN COALESCE(is_available, FALSE);
+END//
+DELIMITER ;
+
+-- Set up MySQL 8.0 specific optimizations
+-- Enable performance schema for better monitoring
+SET GLOBAL performance_schema = ON;
+
+-- Optimize for the theater booking workload
+SET GLOBAL innodb_adaptive_hash_index = ON;
+SET GLOBAL innodb_change_buffering = 'all';
+
 -- Verify tables were created successfully
 SHOW TABLES;
 
@@ -261,3 +361,14 @@ SHOW TABLES;
 DESCRIBE shows;
 DESCRIBE bookings;
 DESCRIBE show_availability_index;
+
+-- Show MySQL version and configuration
+SELECT VERSION() as mysql_version;
+SELECT @@sql_mode as sql_mode;
+SELECT @@character_set_server as character_set;
+SELECT @@collation_server as collation;
+
+-- Display index information
+SHOW INDEX FROM shows;
+SHOW INDEX FROM bookings;
+SHOW INDEX FROM show_availability_index;
