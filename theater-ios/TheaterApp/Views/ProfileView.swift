@@ -6,6 +6,7 @@ struct ProfileView: View {
     @State private var showingLogin = false
     @State private var showingAdminLogin = false
     @State private var showingAdminDashboard = false
+    @State private var showingDebugSettings = false
     
     var body: some View {
         NavigationView {
@@ -28,6 +29,9 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showingAdminDashboard) {
                 AdminDashboardView()
+            }
+            .sheet(isPresented: $showingDebugSettings) {
+                DebugSettingsView()
             }
         }
     }
@@ -214,6 +218,15 @@ struct ProfileView: View {
                     subtitle: "Get help or contact support",
                     action: {
                         // Open help
+                    }
+                )
+                
+                ActionRow(
+                    icon: "gear",
+                    title: "Debug Settings",
+                    subtitle: "Configure app behavior",
+                    action: {
+                        showingDebugSettings = true
                     }
                 )
             }

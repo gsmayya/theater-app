@@ -7,12 +7,41 @@ class APIService: ObservableObject {
     
     private let baseURL = "http://localhost:8080/api/v1"
     private let session = URLSession.shared
+    private let mockDataService = MockDataService.shared
+    private var useMockData = false
     
-    private init() {}
+    private init() {
+        // Check if backend is available on startup
+        checkBackendAvailability()
+    }
+    
+    // MARK: - Backend Availability Check
+    private func checkBackendAvailability() {
+        // For now, we'll use mock data by default
+        // In a real app, you might want to ping the backend first
+        useMockData = true
+    }
+    
+    // MARK: - Configuration Methods
+    func setUseMockData(_ useMock: Bool) {
+        useMockData = useMock
+    }
+    
+    var isUsingMockData: Bool {
+        return useMockData
+    }
     
     // MARK: - Show Endpoints
     
     func fetchShows() -> AnyPublisher<[Show], Error> {
+        if useMockData {
+            // Return mock data with a small delay to simulate network
+            return Just(mockDataService.getMockShows())
+                .delay(for: .milliseconds(500), scheduler: DispatchQueue.main)
+                .setFailureType(to: Error.self)
+                .eraseToAnyPublisher()
+        }
+        
         guard let url = URL(string: "\(baseURL)/shows") else {
             return Fail(error: APIError.invalidURL)
                 .eraseToAnyPublisher()
@@ -21,11 +50,28 @@ class APIService: ObservableObject {
         return session.dataTaskPublisher(for: url)
             .map(\.data)
             .decode(type: [Show].self, decoder: JSONDecoder())
+            .catch { _ in
+                // Fallback to mock data on error
+                Just(self.mockDataService.getMockShows())
+                    .setFailureType(to: Error.self)
+            }
             .receive(on: DispatchQueue.main)
             .eraseToAnyPublisher()
     }
     
     func searchShows(params: SearchParams) -> AnyPublisher<[Show], Error> {
+        if useMockData {
+            // Use mock data for search
+            let searchQuery = params.search ?? ""
+            let location = params.location
+            let results = mockDataService.searchMockShows(query: searchQuery, location: location)
+            
+            return Just(results)
+                .delay(for: .milliseconds(300), scheduler: DispatchQueue.main)
+                .setFailureType(to: Error.self)
+                .eraseToAnyPublisher()
+        }
+        
         var components = URLComponents(string: "\(baseURL)/search")
         components?.queryItems = params.queryItems
         
@@ -37,6 +83,14 @@ class APIService: ObservableObject {
         return session.dataTaskPublisher(for: url)
             .map(\.data)
             .decode(type: [Show].self, decoder: JSONDecoder())
+            .catch { _ in
+                // Fallback to mock data on error
+                let searchQuery = params.search ?? ""
+                let location = params.location
+                let results = self.mockDataService.searchMockShows(query: searchQuery, location: location)
+                return Just(results)
+                    .setFailureType(to: Error.self)
+            }
             .receive(on: DispatchQueue.main)
             .eraseToAnyPublisher()
     }
@@ -84,6 +138,21 @@ class APIService: ObservableObject {
     // MARK: - Booking Endpoints
     
     func createBooking(_ booking: BookingRequest) -> AnyPublisher<Booking, Error> {
+        if useMockData {
+            // Create mock booking
+            let mockBooking = mockDataService.createMockBooking(
+                showId: booking.showId,
+                customerName: booking.customerName ?? "Guest",
+                customerEmail: booking.contactValue,
+                numberOfTickets: booking.numberOfTickets
+            )
+            
+            return Just(mockBooking)
+                .delay(for: .milliseconds(800), scheduler: DispatchQueue.main)
+                .setFailureType(to: Error.self)
+                .eraseToAnyPublisher()
+        }
+        
         guard let url = URL(string: "\(baseURL)/bookings/create") else {
             return Fail(error: APIError.invalidURL)
                 .eraseToAnyPublisher()
@@ -103,6 +172,17 @@ class APIService: ObservableObject {
         return session.dataTaskPublisher(for: request)
             .map(\.data)
             .decode(type: Booking.self, decoder: JSONDecoder())
+            .catch { _ in
+                // Fallback to mock data on error
+                let mockBooking = self.mockDataService.createMockBooking(
+                    showId: booking.showId,
+                    customerName: booking.customerName ?? "Guest",
+                    customerEmail: booking.contactValue,
+                    numberOfTickets: booking.numberOfTickets
+                )
+                return Just(mockBooking)
+                    .setFailureType(to: Error.self)
+            }
             .receive(on: DispatchQueue.main)
             .eraseToAnyPublisher()
     }
@@ -140,6 +220,19 @@ class APIService: ObservableObject {
     }
     
     func getBookingsByContact(contactValue: String) -> AnyPublisher<[Booking], Error> {
+        if useMockData {
+            // Return mock bookings filtered by contact
+            let allBookings = mockDataService.getMockBookings()
+            let filteredBookings = allBookings.filter { booking in
+                booking.contactValue == contactValue
+            }
+            
+            return Just(filteredBookings)
+                .delay(for: .milliseconds(400), scheduler: DispatchQueue.main)
+                .setFailureType(to: Error.self)
+                .eraseToAnyPublisher()
+        }
+        
         var components = URLComponents(string: "\(baseURL)/bookings/by-contact")
         components?.queryItems = [URLQueryItem(name: "contact_value", value: contactValue)]
         
@@ -151,6 +244,15 @@ class APIService: ObservableObject {
         return session.dataTaskPublisher(for: url)
             .map(\.data)
             .decode(type: [Booking].self, decoder: JSONDecoder())
+            .catch { _ in
+                // Fallback to mock data on error
+                let allBookings = self.mockDataService.getMockBookings()
+                let filteredBookings = allBookings.filter { booking in
+                    booking.contactValue == contactValue
+                }
+                return Just(filteredBookings)
+                    .setFailureType(to: Error.self)
+            }
             .receive(on: DispatchQueue.main)
             .eraseToAnyPublisher()
     }

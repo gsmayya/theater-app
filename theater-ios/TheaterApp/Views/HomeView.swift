@@ -71,6 +71,17 @@ struct HomeView: View {
                 Text("Discover amazing live performances")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
+                
+                // Debug indicator for mock data
+                if apiService.isUsingMockData {
+                    Text("📱 Using Sample Data")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(8)
+                }
             }
             .padding(.horizontal)
             

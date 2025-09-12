@@ -11,6 +11,8 @@
 		A1234567890ABCDEF003 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF004 /* ContentView.swift */; };
 		A1234567890ABCDEF005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF006 /* Assets.xcassets */; };
 		A1234567890ABCDEF007 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF008 /* Preview Assets.xcassets */; };
+		C52EEB3B2E748E6D0001AC56 /* DebugSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C52EEB3A2E748E6D0001AC56 /* DebugSettingsView.swift */; };
+		C52EEB3D2E748E7D0001AC56 /* MockDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C52EEB3C2E748E7D0001AC56 /* MockDataService.swift */; };
 		C5CE29E32E72F4920047E5A5 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5CE29E02E72F4920047E5A5 /* MainTabView.swift */; };
 		C5CE29E42E72F4920047E5A5 /* QRCodeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5CE29D72E72F4920047E5A5 /* QRCodeService.swift */; };
 		C5CE29E52E72F4920047E5A5 /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5CE29DD2E72F4920047E5A5 /* CalendarView.swift */; };
@@ -34,6 +36,8 @@
 		A1234567890ABCDEF008 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		A1234567890ABCDEF019 /* TheaterApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TheaterApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1234567890ABCDEF020 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		C52EEB3A2E748E6D0001AC56 /* DebugSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugSettingsView.swift; sourceTree = "<group>"; };
+		C52EEB3C2E748E7D0001AC56 /* MockDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockDataService.swift; sourceTree = "<group>"; };
 		C5CE29D12E72F4920047E5A5 /* Show.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Show.swift; sourceTree = "<group>"; };
 		C5CE29D32E72F4920047E5A5 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		C5CE29D52E72F4920047E5A5 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
@@ -136,6 +140,7 @@
 		C5CE29D82E72F4920047E5A5 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				C52EEB3C2E748E7D0001AC56 /* MockDataService.swift */,
 				C5CE29D52E72F4920047E5A5 /* APIService.swift */,
 				C5CE29D62E72F4920047E5A5 /* AuthService.swift */,
 				C5CE29D72E72F4920047E5A5 /* QRCodeService.swift */,
@@ -146,6 +151,7 @@
 		C5CE29E22E72F4920047E5A5 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				C52EEB3A2E748E6D0001AC56 /* DebugSettingsView.swift */,
 				C5CE29D92E72F4920047E5A5 /* AdminDashboardView.swift */,
 				C5CE29DA2E72F4920047E5A5 /* AdminLoginView.swift */,
 				C5CE29DB2E72F4920047E5A5 /* BookingsView.swift */,
@@ -233,8 +239,10 @@
 				A1234567890ABCDEF003 /* ContentView.swift in Sources */,
 				C5CE29E32E72F4920047E5A5 /* MainTabView.swift in Sources */,
 				C5CE29E42E72F4920047E5A5 /* QRCodeService.swift in Sources */,
+				C52EEB3D2E748E7D0001AC56 /* MockDataService.swift in Sources */,
 				C5CE29E52E72F4920047E5A5 /* CalendarView.swift in Sources */,
 				C5CE29E62E72F4920047E5A5 /* BookingsView.swift in Sources */,
+				C52EEB3B2E748E6D0001AC56 /* DebugSettingsView.swift in Sources */,
 				C5CE29E72E72F4920047E5A5 /* HomeView.swift in Sources */,
 				C5CE29E82E72F4920047E5A5 /* CreateShowView.swift in Sources */,
 				C5CE29E92E72F4920047E5A5 /* APIService.swift in Sources */,
